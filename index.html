@@ -1,0 +1,158 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Perya Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            margin: 0;
+            overflow-x: hidden;
+        }
+        .font-perya {
+            font-family: 'Bungee', cursive;
+        }
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+        @media (max-width: 640px) {
+            .card-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        .perya-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+        }
+        .perya-card.selected {
+            background-color: #fef9c3;
+            border-color: #facc15;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(250, 204, 21, 0.5);
+        }
+        .perya-card.winning {
+            animation: card-win 0.6s infinite alternate;
+            border-color: #22c55e;
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.7);
+            z-index: 10;
+        }
+        @keyframes card-win {
+            from { transform: translateY(0) scale(1.05); }
+            to { transform: translateY(-12px) scale(1.1); }
+        }
+        .dealer-bubble {
+            position: relative;
+            background: white;
+            color: #1e293b;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .dealer-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 2rem;
+            width: 20px;
+            height: 20px;
+            background: white;
+            transform: rotate(45deg);
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0"
+  }
+}
+</script>
+</head>
+<body class="p-4 md:p-8">
+
+    <div id="game-container" class="max-w-6xl mx-auto flex flex-col items-center">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-5xl md:text-7xl text-yellow-400 font-perya drop-shadow-[0_5px_0_rgba(180,83,9,1)] mb-4">
+                CARD PERYA
+            </h1>
+            <div class="flex justify-center gap-4 flex-wrap">
+                <div class="bg-slate-800 border-2 border-slate-700 px-6 py-2 rounded-full flex items-center shadow-xl">
+                    <span class="text-yellow-500 mr-2 text-2xl font-bold">₱</span>
+                    <span id="balance-txt" class="text-white text-2xl font-perya">1000</span>
+                </div>
+                <div class="bg-slate-800 border-2 border-slate-700 px-6 py-2 rounded-full flex items-center shadow-xl">
+                    <span class="text-blue-400 mr-2 text-2xl font-bold">🃏</span>
+                    <span id="bet-count-txt" class="text-white text-2xl font-perya">0 / 3</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="w-full flex flex-col lg:flex-row gap-8 items-start justify-center">
+            
+            <!-- Table Section -->
+            <section class="flex-1 w-full bg-slate-800/40 p-6 rounded-3xl border-2 border-slate-700/50 backdrop-blur-sm">
+                <div class="text-center mb-6">
+                    <span class="text-slate-400 text-sm tracking-[0.2em] font-bold uppercase">Choose Your Luck</span>
+                    <h2 class="text-3xl text-yellow-500 font-perya">TABLE OF 12</h2>
+                </div>
+                <div id="card-grid" class="card-grid">
+                    <!-- Cards injected by JS -->
+                </div>
+            </section>
+
+            <!-- Sidebar Section -->
+            <aside class="w-full lg:w-96 flex flex-col gap-6">
+                <!-- Dealer -->
+                <div class="dealer-bubble mb-6">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-2xl">🎪</span>
+                        <span class="font-bold text-xs uppercase tracking-widest text-slate-400">Perya Barker</span>
+                    </div>
+                    <p id="dealer-msg" class="text-lg font-bold italic leading-tight">
+                        "Mano-mano na tayo! Taya na kayo sa maswerteng baraha!"
+                    </p>
+                </div>
+
+                <!-- Latest Results -->
+                <div class="bg-slate-800 p-6 rounded-3xl border-2 border-slate-700 shadow-2xl">
+                    <h3 class="text-center text-slate-500 text-xs tracking-widest font-bold mb-4">LATEST DRAW</h3>
+                    <div id="results-area" class="flex justify-center gap-3 min-h-[100px]">
+                        <div class="flex gap-3 opacity-10">
+                            <div class="w-16 h-24 bg-slate-600 rounded-lg"></div>
+                            <div class="w-16 h-24 bg-slate-600 rounded-lg"></div>
+                            <div class="w-16 h-24 bg-slate-600 rounded-lg"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="flex flex-col gap-4">
+                    <button id="draw-btn" disabled 
+                        class="w-full py-5 rounded-2xl text-3xl font-perya bg-yellow-500 text-slate-900 shadow-[0_6px_0_rgba(180,83,9,1)] transition-all hover:bg-yellow-400 active:translate-y-1 active:shadow-[0_2px_0_rgba(180,83,9,1)] disabled:opacity-50 disabled:shadow-none disabled:translate-y-2">
+                        DRAW CARDS
+                    </button>
+                    <div class="flex gap-3">
+                        <button id="reset-btn" class="flex-1 py-3 rounded-xl bg-slate-700 font-perya text-sm border-b-4 border-slate-900 hover:bg-slate-600">
+                            CLEAR ALL
+                        </button>
+                        <button id="refill-btn" class="hidden flex-1 py-3 rounded-xl bg-green-600 font-perya text-sm border-b-4 border-green-900 hover:bg-green-500">
+                            REFILL
+                        </button>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Script must be type="module" to use GoogleGenAI import -->
+    <script type="module" src="index.js"></script>
+</body>
+</html>
