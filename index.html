@@ -1,12 +1,11 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Card Perya Master</title>
+    <title>Fiesta Card Master</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Inter:wght@400;700&family=Playfair+Display:wght@900&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -14,68 +13,174 @@
             color: #f8fafc;
             margin: 0;
             overflow-x: hidden;
+            background: 
+                radial-gradient(circle at 20% 20%, rgba(245, 158, 11, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 40%),
+                linear-gradient(to bottom, #0f172a, #1e293b);
+            background-attachment: fixed;
+            min-height: 100vh;
         }
-        .font-perya {
-            font-family: 'Bungee', cursive;
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l2.5 5 5 2.5-5 2.5-2.5 5-2.5-5-5-2.5 5-2.5z' fill='%23facc15' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: -1;
         }
+
+        .font-perya { font-family: 'Bungee', cursive; }
+        .font-card { font-family: 'Playfair Display', serif; }
+
         .card-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
+            gap: 1.25rem;
         }
         @media (max-width: 640px) {
-            .card-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
+            .card-grid { grid-template-columns: repeat(3, 1fr); }
         }
+
+        /* PREMIUM CARD DESIGN */
         .perya-card {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
             user-select: none;
+            perspective: 1000px;
+            position: relative;
+            background: #fff9f0;
+            border-radius: 0.75rem;
+            border: 4px solid #d4af37;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            cursor: pointer;
         }
-        .perya-card.selected {
-            background-color: #fef9c3;
+
+        /* Hover Effect for Cards */
+        .perya-card:hover:not(.drawing) {
+            transform: scale(1.05) translateY(-4px);
+            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.4);
             border-color: #facc15;
-            transform: scale(1.05);
-            box-shadow: 0 0 15px rgba(250, 204, 21, 0.5);
         }
+
+        .perya-card::before {
+            content: '';
+            position: absolute;
+            inset: 4px;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 0.5rem;
+            pointer-events: none;
+        }
+
+        /* Selection Animation */
+        .perya-card.selected {
+            background-color: #fffde7;
+            border-color: #facc15;
+            transform: scale(1.12) translateY(-12px) rotate(2deg);
+            box-shadow: 0 20px 30px -10px rgba(250, 204, 21, 0.6);
+            z-index: 20;
+        }
+
+        /* Winning Effect */
         .perya-card.winning {
-            animation: card-win 0.6s infinite alternate;
+            animation: card-win-float 0.8s infinite alternate cubic-bezier(0.45, 0, 0.55, 1);
             border-color: #22c55e;
-            box-shadow: 0 0 25px rgba(34, 197, 94, 0.7);
-            z-index: 10;
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.8), 0 0 50px rgba(34, 197, 94, 0.4);
+            z-index: 30;
         }
-        @keyframes card-win {
-            from { transform: translateY(0) scale(1.05); }
-            to { transform: translateY(-12px) scale(1.1); }
+
+        .perya-card.winning::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                135deg,
+                transparent 45%,
+                rgba(255, 255, 255, 0.8) 50%,
+                transparent 55%
+            );
+            background-size: 200% 200%;
+            animation: win-shimmer 1.5s infinite linear;
+            pointer-events: none;
         }
+
+        @keyframes win-shimmer {
+            0% { background-position: -200% -200%; }
+            100% { background-position: 200% 200%; }
+        }
+
+        @keyframes card-win-float {
+            from { transform: translateY(-12px) scale(1.12) rotate(2deg); }
+            to { transform: translateY(-24px) scale(1.2) rotate(-2deg); }
+        }
+
+        /* Drawing Animation */
+        .perya-card.drawing {
+            animation: card-shake 0.15s infinite;
+            filter: brightness(0.9);
+            cursor: default;
+        }
+
+        @keyframes card-shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            20% { transform: translate(-1px, -1px) rotate(1deg); }
+            40% { transform: translate(-2px, 0px) rotate(-1deg); }
+            60% { transform: translate(2px, 1px) rotate(0deg); }
+            80% { transform: translate(1px, -1px) rotate(1deg); }
+            100% { transform: translate(-1px, 2px) rotate(-1deg); }
+        }
+
+        /* Modal Overlay */
+        #rules-modal {
+            background-color: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(8px);
+        }
+
         .dealer-bubble {
             position: relative;
             background: white;
             color: #1e293b;
             padding: 1.5rem;
-            border-radius: 1rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-radius: 1.5rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+            border: 4px solid #facc15;
+            transition: all 0.3s ease;
         }
+
         .dealer-bubble::after {
             content: '';
             position: absolute;
-            bottom: -10px;
+            bottom: -15px;
             left: 2rem;
-            width: 20px;
-            height: 20px;
+            width: 25px; height: 25px;
             background: white;
+            border-right: 4px solid #facc15;
+            border-bottom: 4px solid #facc15;
             transform: rotate(45deg);
         }
+
         .bet-chip {
-            transition: all 0.2s;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             cursor: pointer;
+            filter: grayscale(0.5);
         }
         .bet-chip.active {
             background-color: #facc15;
             color: #1e293b;
-            transform: scale(1.1);
-            box-shadow: 0 0 10px rgba(250, 204, 21, 0.8);
+            transform: scale(1.15);
+            box-shadow: 0 0 25px rgba(250, 204, 21, 0.6);
             border-color: #b45309;
+            filter: grayscale(0);
+        }
+
+        .light-bulb {
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            animation: bulb-glow 1.2s infinite alternate;
+        }
+        @keyframes bulb-glow {
+            from { opacity: 0.4; transform: scale(0.8); box-shadow: 0 0 0px currentColor; }
+            to { opacity: 1; transform: scale(1.3); box-shadow: 0 0 15px currentColor; }
         }
     </style>
 <script type="importmap">
@@ -86,33 +191,105 @@
 }
 </script>
 </head>
-<body class="p-4 md:p-8">
+<body class="p-4 md:p-8 min-h-screen flex flex-col items-center">
 
-    <div id="game-container" class="max-w-6xl mx-auto flex flex-col items-center">
-        <!-- Header -->
-        <header class="text-center mb-8">
-            <h1 class="text-5xl md:text-7xl text-yellow-400 font-perya drop-shadow-[0_5px_0_rgba(180,83,9,1)] mb-4">
-                CARD PERYA
+    <!-- Rules Modal -->
+    <div id="rules-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-6">
+        <div class="bg-slate-800 border-4 border-yellow-500 rounded-[3rem] max-w-2xl w-full p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div class="text-center mb-6">
+                <h2 class="text-4xl font-perya text-yellow-400 mb-2">Game Rules</h2>
+                <div class="w-24 h-1 bg-yellow-500 mx-auto rounded-full opacity-50"></div>
+            </div>
+            
+            <div class="space-y-6 text-slate-200">
+                <section>
+                    <h3 class="font-perya text-emerald-400 text-xl mb-2">How to Play</h3>
+                    <p>Select up to <span class="text-yellow-400 font-bold">3 cards</span> from the table. Each card you select counts as one bet. You can choose any combination of ranks and suits.</p>
+                </section>
+
+                <section>
+                    <h3 class="font-perya text-emerald-400 text-xl mb-2">Winning the Draw</h3>
+                    <p>When you click <span class="text-yellow-400 font-bold">SHUFFLE</span>, three cards are randomly drawn. If any of the drawn cards match your selected cards, you win!</p>
+                </section>
+
+                <section>
+                    <h3 class="font-perya text-emerald-400 text-xl mb-2">Payout Structure</h3>
+                    <div class="bg-slate-900/50 p-4 rounded-2xl border border-slate-700 grid grid-cols-3 gap-4 text-center">
+                        <div>
+                            <div class="text-yellow-400 text-2xl font-perya">2X</div>
+                            <div class="text-[10px] uppercase font-bold text-slate-500">1 Match</div>
+                        </div>
+                        <div>
+                            <div class="text-yellow-400 text-2xl font-perya">4X</div>
+                            <div class="text-[10px] uppercase font-bold text-slate-500">2 Matches</div>
+                        </div>
+                        <div>
+                            <div class="text-yellow-400 text-2xl font-perya">10X</div>
+                            <div class="text-[10px] uppercase font-bold text-slate-500">3 Matches</div>
+                        </div>
+                    </div>
+                    <p class="mt-2 text-xs text-slate-400 italic text-center">*Payout is calculated per matched card based on your individual bet amount.</p>
+                </section>
+
+                <section>
+                    <h3 class="font-perya text-emerald-400 text-xl mb-2">Card Ranks & Suits</h3>
+                    <p>The deck consists of 12 unique cards: <span class="text-yellow-400">J, Q, K, A</span> in <span class="text-red-500">Hearts</span>, <span class="text-slate-400">Spades</span>, and <span class="text-red-400">Diamonds</span>.</p>
+                </section>
+            </div>
+
+            <button id="close-rules" class="mt-8 w-full py-4 bg-yellow-500 text-slate-900 font-perya text-xl rounded-2xl hover:bg-yellow-400 active:scale-95 transition-all shadow-lg">
+                GOT IT!
+            </button>
+        </div>
+    </div>
+
+    <div id="game-container" class="max-w-6xl w-full mx-auto flex flex-col items-center">
+        <!-- Top Nav / Rules Button -->
+        <div class="w-full flex justify-between items-center mb-6">
+            <div class="flex gap-2">
+                <div class="light-bulb bg-red-500 text-red-500"></div>
+                <div class="light-bulb bg-yellow-400 text-yellow-400" style="animation-delay: 0.2s"></div>
+                <div class="light-bulb bg-blue-500 text-blue-500" style="animation-delay: 0.4s"></div>
+            </div>
+            <div class="flex gap-3">
+                <button id="fullscreen-btn" class="px-6 py-2 bg-slate-800 border-2 border-emerald-500 text-emerald-500 font-perya rounded-full hover:bg-emerald-500 hover:text-slate-900 transition-all shadow-lg active:scale-95">
+                    FULL SCREEN
+                </button>
+                <button id="open-rules" class="px-6 py-2 bg-slate-800 border-2 border-yellow-500 text-yellow-500 font-perya rounded-full hover:bg-yellow-500 hover:text-slate-900 transition-all shadow-lg active:scale-95">
+                    RULES
+                </button>
+            </div>
+            <div class="flex gap-2">
+                <div class="light-bulb bg-green-500 text-green-500" style="animation-delay: 0.6s"></div>
+                <div class="light-bulb bg-purple-500 text-purple-500" style="animation-delay: 0.8s"></div>
+                <div class="light-bulb bg-red-500 text-red-500" style="animation-delay: 1.0s"></div>
+            </div>
+        </div>
+
+        <header class="text-center mb-10">
+            <h1 class="text-6xl md:text-8xl text-yellow-400 font-perya drop-shadow-[0_8px_0_rgba(180,83,9,1)] mb-4 tracking-tighter">
+                FIESTA CARDS
             </h1>
-            <div class="flex justify-center gap-4 flex-wrap">
-                <div class="bg-slate-800 border-2 border-slate-700 px-6 py-2 rounded-full flex items-center shadow-xl">
-                    <span class="text-yellow-500 mr-2 text-2xl font-bold">₱</span>
-                    <span id="balance-txt" class="text-white text-2xl font-perya">1000</span>
+            <div class="flex justify-center gap-6 flex-wrap">
+                <div class="bg-slate-800 border-4 border-slate-700 px-8 py-3 rounded-3xl flex items-center shadow-2xl backdrop-blur-sm bg-opacity-90">
+                    <span class="text-yellow-500 mr-3 text-3xl font-bold">$</span>
+                    <span id="balance-txt" class="text-white text-3xl font-perya">1000</span>
                 </div>
-                <div class="bg-slate-800 border-2 border-slate-700 px-6 py-2 rounded-full flex items-center shadow-xl">
-                    <span class="text-blue-400 mr-2 text-2xl font-bold">🃏</span>
-                    <span id="bet-count-txt" class="text-white text-2xl font-perya">0 / 3</span>
+                <div class="bg-slate-800 border-4 border-slate-700 px-8 py-3 rounded-3xl flex items-center shadow-2xl backdrop-blur-sm bg-opacity-90">
+                    <span class="text-blue-400 mr-3 text-3xl font-bold">🃏</span>
+                    <span id="bet-count-txt" class="text-white text-3xl font-perya">0 / 3</span>
                 </div>
             </div>
         </header>
 
-        <div class="w-full flex flex-col lg:flex-row gap-8 items-start justify-center">
+        <div class="w-full flex flex-col lg:flex-row gap-10 items-start justify-center">
             
             <!-- Table Section -->
-            <section class="flex-1 w-full bg-slate-800/40 p-6 rounded-3xl border-2 border-slate-700/50 backdrop-blur-sm">
-                <div class="text-center mb-6">
-                    <span class="text-slate-400 text-sm tracking-[0.2em] font-bold uppercase">Choose Your Luck</span>
-                    <h2 class="text-3xl text-yellow-500 font-perya">TABLE OF 12</h2>
+            <section class="flex-1 w-full bg-slate-800/60 p-10 rounded-[4rem] border-4 border-slate-700 shadow-[0_0_80px_rgba(0,0,0,0.6)] backdrop-blur-md relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-2 bg-yellow-500/10"></div>
+                <div class="text-center mb-10">
+                    <span class="text-slate-400 text-xs tracking-[0.5em] font-bold uppercase mb-2 block">Premium Gaming Table</span>
+                    <h2 class="text-5xl text-yellow-500 font-perya tracking-tight">TABLE OF 12</h2>
                 </div>
                 <div id="card-grid" class="card-grid">
                     <!-- Cards injected by JS -->
@@ -120,60 +297,90 @@
             </section>
 
             <!-- Sidebar Section -->
-            <aside class="w-full lg:w-96 flex flex-col gap-6">
-                <!-- Dealer -->
-                <div class="dealer-bubble mb-6">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="text-2xl">🎪</span>
-                        <span class="font-bold text-xs uppercase tracking-widest text-slate-400">Perya Barker</span>
+            <aside class="w-full lg:w-[420px] flex flex-col gap-8">
+                <!-- Dealer Speech -->
+                <div id="barker-box" class="dealer-bubble">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-4xl">🤡</span>
+                        <div class="flex flex-col">
+                            <span class="font-bold text-xs uppercase tracking-[0.2em] text-slate-500">Master Barker</span>
+                            <span class="text-[10px] text-green-600 font-bold uppercase">● Online</span>
+                        </div>
                     </div>
-                    <p id="dealer-msg" class="text-lg font-bold italic leading-tight">
-                        "Mano-mano na tayo! Taya na kayo sa maswerteng baraha!"
+                    <p id="dealer-msg" class="text-xl font-bold italic leading-tight text-slate-800">
+                        "Welcome to the Grand Fiesta! Lady Luck is waiting. Place your bets!"
                     </p>
                 </div>
 
-                <!-- Bet Selection -->
-                <div class="bg-slate-800 p-4 rounded-3xl border-2 border-slate-700 shadow-xl">
-                    <h3 class="text-center text-slate-400 text-xs tracking-widest font-bold mb-3 uppercase">Bet Per Card</h3>
-                    <div id="bet-amount-selector" class="flex justify-center gap-4">
-                        <button data-amount="10" class="bet-chip active w-12 h-12 rounded-full border-2 border-slate-600 flex items-center justify-center font-perya text-sm bg-slate-900">10</button>
-                        <button data-amount="20" class="bet-chip w-12 h-12 rounded-full border-2 border-slate-600 flex items-center justify-center font-perya text-sm bg-slate-900">20</button>
-                        <button data-amount="50" class="bet-chip w-12 h-12 rounded-full border-2 border-slate-600 flex items-center justify-center font-perya text-sm bg-slate-900">50</button>
+                <!-- Bet Configuration -->
+                <div class="bg-slate-800/90 p-8 rounded-[3rem] border-4 border-slate-700 shadow-2xl backdrop-blur-sm">
+                    <h3 class="text-center text-slate-400 text-xs tracking-widest font-bold mb-6 uppercase">SELECT BET AMOUNT</h3>
+                    <div id="bet-amount-selector" class="flex justify-center gap-8">
+                        <button data-amount="10" class="bet-chip active w-20 h-20 rounded-full border-4 border-slate-600 flex flex-col items-center justify-center font-perya text-2xl bg-slate-900">
+                            <span class="text-xs leading-none text-slate-500">$</span>10
+                        </button>
+                        <button data-amount="20" class="bet-chip w-20 h-20 rounded-full border-4 border-slate-600 flex flex-col items-center justify-center font-perya text-2xl bg-slate-900">
+                            <span class="text-xs leading-none text-slate-500">$</span>20
+                        </button>
+                        <button data-amount="50" class="bet-chip w-20 h-20 rounded-full border-4 border-slate-600 flex flex-col items-center justify-center font-perya text-2xl bg-slate-900">
+                            <span class="text-xs leading-none text-slate-500">$</span>50
+                        </button>
+                    </div>
+                    <div class="mt-6 text-center">
+                        <span id="total-bet-display" class="text-lg font-bold text-yellow-500">TOTAL BET: $0</span>
                     </div>
                 </div>
 
-                <!-- Latest Results -->
-                <div class="bg-slate-800 p-6 rounded-3xl border-2 border-slate-700 shadow-2xl">
-                    <h3 class="text-center text-slate-500 text-xs tracking-widest font-bold mb-4">LATEST DRAW</h3>
-                    <div id="results-area" class="flex justify-center gap-3 min-h-[100px]">
-                        <div class="flex gap-3 opacity-10">
-                            <div class="w-16 h-24 bg-slate-600 rounded-lg"></div>
-                            <div class="w-16 h-24 bg-slate-600 rounded-lg"></div>
-                            <div class="w-16 h-24 bg-slate-600 rounded-lg"></div>
+                <!-- Drawing Results -->
+                <div class="bg-slate-800 p-10 rounded-[3rem] border-4 border-slate-700 shadow-2xl relative overflow-hidden backdrop-blur-sm">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-yellow-500/30 to-transparent"></div>
+                    <h3 class="text-center text-slate-500 text-xs tracking-widest font-bold mb-8 uppercase">THE WINNING HAND</h3>
+                    <div id="results-area" class="flex justify-center gap-6 min-h-[140px]">
+                        <div class="flex gap-4 opacity-5">
+                            <div class="w-24 h-32 bg-slate-600 rounded-xl"></div>
+                            <div class="w-24 h-32 bg-slate-600 rounded-xl"></div>
+                            <div class="w-24 h-32 bg-slate-600 rounded-xl"></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Controls -->
-                <div class="flex flex-col gap-4">
+                <!-- Main Action -->
+                <div class="flex flex-col gap-6">
                     <button id="draw-btn" disabled 
-                        class="w-full py-5 rounded-2xl text-3xl font-perya bg-yellow-500 text-slate-900 shadow-[0_6px_0_rgba(180,83,9,1)] transition-all hover:bg-yellow-400 active:translate-y-1 active:shadow-[0_2px_0_rgba(180,83,9,1)] disabled:opacity-50 disabled:shadow-none disabled:translate-y-2">
-                        DRAW CARDS
+                        class="w-full py-8 rounded-[2.5rem] text-5xl font-perya bg-yellow-500 text-slate-900 shadow-[0_12px_0_rgba(180,83,9,1)] transition-all hover:bg-yellow-400 active:translate-y-3 active:shadow-[0_4px_0_rgba(180,83,9,1)] disabled:opacity-20 disabled:grayscale disabled:translate-y-3 disabled:shadow-none">
+                        SHUFFLE!
                     </button>
-                    <div class="flex gap-3">
-                        <button id="reset-btn" class="flex-1 py-3 rounded-xl bg-slate-700 font-perya text-sm border-b-4 border-slate-900 hover:bg-slate-600">
-                            CLEAR ALL
+                    <div class="flex gap-4">
+                        <button id="reset-btn" class="flex-1 py-5 rounded-2xl bg-slate-700 font-perya text-sm border-b-6 border-slate-900 hover:bg-slate-600 active:translate-y-1 active:border-b-2 transition-all uppercase tracking-widest">
+                            RESET TABLE
                         </button>
-                        <button id="refill-btn" class="hidden flex-1 py-3 rounded-xl bg-green-600 font-perya text-sm border-b-4 border-green-900 hover:bg-green-500">
-                            REFILL
+                        <button id="refill-btn" class="hidden flex-1 py-5 rounded-2xl bg-emerald-600 font-perya text-sm border-b-6 border-emerald-900 hover:bg-emerald-500 transition-all uppercase tracking-widest">
+                            GET CASH
                         </button>
                     </div>
                 </div>
             </aside>
         </div>
+        
+        <div class="mt-20 text-slate-500 text-xs text-center max-w-lg bg-slate-900/60 p-6 rounded-[2rem] border border-slate-800 backdrop-blur-sm shadow-xl">
+            <p class="mb-4 uppercase tracking-[0.3em] font-bold text-slate-400">Fiesta Rewards</p>
+            <div class="flex justify-around font-perya text-lg">
+                <div class="flex flex-col items-center">
+                    <span class="text-emerald-500">2X</span>
+                    <span class="text-[8px] text-slate-500 uppercase tracking-tighter">1 Match</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <span class="text-emerald-500">4X</span>
+                    <span class="text-[8px] text-slate-500 uppercase tracking-tighter">2 Matches</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <span class="text-emerald-500">10X</span>
+                    <span class="text-[8px] text-slate-500 uppercase tracking-tighter">3 Matches</span>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Script must be type="module" to use GoogleGenAI import -->
     <script type="module" src="index.js"></script>
 </body>
 </html>
