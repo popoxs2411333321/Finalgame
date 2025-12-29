@@ -6,67 +6,9 @@ const MAX_BETS = 3;
 const SUITS = ['HEARTS', 'SPADES', 'DIAMONDS'];
 const RANKS = ['J', 'Q', 'K', 'A'];
 const SYMBOLS = { HEARTS: '♥', SPADES: '♠', DIAMONDS: '♦' };
+const RANK_NAMES = { J: 'Jack', Q: 'Queen', K: 'King', A: 'Ace' };
+const SUIT_NAMES = { HEARTS: 'Hearts', SPADES: 'Spades', DIAMONDS: 'Diamonds' };
 const COLORS = { HEARTS: 'text-red-600', SPADES: 'text-slate-900', DIAMONDS: 'text-red-500' };
-
-// --- Audio Context for synthesized sounds ---
-let audioCtx = null;
-
-function playSound(type) {
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    
-    const now = audioCtx.currentTime;
-
-    switch (type) {
-        case 'select':
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(400, now);
-            osc.frequency.exponentialRampToValueAtTime(600, now + 0.08);
-            gain.gain.setValueAtTime(0.1, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-            osc.start(now);
-            osc.stop(now + 0.1);
-            break;
-        case 'draw':
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(100 + Math.random() * 50, now);
-            gain.gain.setValueAtTime(0.03, now);
-            gain.gain.linearRampToValueAtTime(0, now + 0.1);
-            osc.start(now);
-            osc.stop(now + 0.1);
-            break;
-        case 'win':
-            const notes = [523.25, 659.25, 783.99, 1046.50];
-            notes.forEach((freq, i) => {
-                const o = audioCtx.createOscillator();
-                const g = audioCtx.createGain();
-                o.type = 'sine';
-                o.frequency.setValueAtTime(freq, now + i * 0.1);
-                g.gain.setValueAtTime(0.1, now + i * 0.1);
-                g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.4);
-                o.connect(g);
-                g.connect(audioCtx.destination);
-                o.start(now + i * 0.1);
-                o.stop(now + i * 0.1 + 0.4);
-            });
-            break;
-        case 'lose':
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(150, now);
-            osc.frequency.linearRampToValueAtTime(80, now + 0.6);
-            gain.gain.setValueAtTime(0.1, now);
-            gain.gain.linearRampToValueAtTime(0, now + 0.6);
-            osc.start(now);
-            osc.stop(now + 0.6);
-            break;
-    }
-}
 
 // --- Global State ---
 let balance = INITIAL_BALANCE;
@@ -74,43 +16,87 @@ let currentBets = [];
 let isDrawing = false;
 let cards = [];
 let betAmountPerCard = 10;
+let audioCtx = null;
+
+// --- Physics & Charging State ---
+const ballIds = [0, 1, 2];
+let activeBallsFinished = 0;
+let winningIndices = [];
+let isCharging = false;
+let chargePower = 0;
+let chargeDirection = 1;
+let chargeInterval = null;
+
+// --- Audio ---
+function playSound(type) {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
+
+    switch (type) {
+        case 'hop':
+            osc.frequency.setValueAtTime(350 + Math.random() * 250, now);
+            gain.gain.setValueAtTime(0.03, now);
+            osc.start(now); osc.stop(now + 0.06);
+            break;
+        case 'win':
+            [523, 659, 783, 1046].forEach((f, i) => {
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.frequency.setValueAtTime(f, now + i * 0.08);
+                g.gain.setValueAtTime(0.04, now + i * 0.08);
+                o.connect(g); g.connect(audioCtx.destination);
+                o.start(now + i * 0.08); o.stop(now + i * 0.08 + 0.4);
+            });
+            break;
+        case 'lose':
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(110, now);
+            gain.gain.setValueAtTime(0.06, now);
+            osc.start(now); osc.stop(now + 0.6);
+            break;
+    }
+}
 
 // --- DOM Elements ---
 const cardGrid = document.getElementById('card-grid');
 const balanceTxt = document.getElementById('balance-txt');
 const betCountTxt = document.getElementById('bet-count-txt');
-const totalBetDisplay = document.getElementById('total-bet-display');
 const dealerMsg = document.getElementById('dealer-msg');
-const barkerBox = document.getElementById('barker-box');
 const resultsArea = document.getElementById('results-area');
 const drawBtn = document.getElementById('draw-btn');
 const resetBtn = document.getElementById('reset-btn');
 const refillBtn = document.getElementById('refill-btn');
-const betAmountButtons = document.querySelectorAll('#bet-amount-selector button');
+const betButtons = document.querySelectorAll('#bet-amount-selector button');
+const powerFill = document.getElementById('power-fill');
+const avatarMouth = document.getElementById('avatar-mouth');
+const fullscreenToggle = document.getElementById('fullscreen-toggle');
 
-const rulesModal = document.getElementById('rules-modal');
-const openRulesBtn = document.getElementById('open-rules');
-const closeRulesBtn = document.getElementById('close-rules');
-const fullscreenBtn = document.getElementById('fullscreen-btn');
+// Modal Elements
+const paymentModal = document.getElementById('payment-modal');
+const closeModalBtn = document.getElementById('close-modal-btn');
+const paymentOptions = document.querySelectorAll('.payment-option');
+
+const helpModal = document.getElementById('help-modal');
+const helpBtn = document.getElementById('help-btn');
+const closeHelpBtn = document.getElementById('close-help-btn');
 
 // --- Initialization ---
 function init() {
-    SUITS.forEach(suit => {
-        RANKS.forEach(rank => {
-            cards.push({ id: `${suit}-${rank}`, suit, rank });
-        });
-    });
-
+    cards = [];
+    SUITS.forEach(suit => RANKS.forEach(rank => cards.push({ id: `${suit}-${rank}`, suit, rank })));
     renderCards();
     setupBetSelectors();
-    setupModalListeners();
-    setupFullscreenListener();
+    setupLaunchMechanic();
+    setupModals();
+    setupFullscreen();
     updateUI();
 }
 
-function setupFullscreenListener() {
-    fullscreenBtn.addEventListener('click', () => {
-        playSound('select');
+function setupFullscreen() {
+    fullscreenToggle.onclick = () => {
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen().catch(err => {
                 console.error(`Error attempting to enable full-screen mode: ${err.message}`);
@@ -118,91 +104,139 @@ function setupFullscreenListener() {
         } else {
             document.exitFullscreen();
         }
-    });
-
-    document.addEventListener('fullscreenchange', () => {
-        if (document.fullscreenElement) {
-            fullscreenBtn.innerText = 'EXIT FULL SCREEN';
-        } else {
-            fullscreenBtn.innerText = 'FULL SCREEN';
-        }
-    });
-}
-
-function setupModalListeners() {
-    openRulesBtn.addEventListener('click', () => {
-        playSound('select');
-        rulesModal.classList.remove('hidden');
-    });
-    closeRulesBtn.addEventListener('click', () => {
-        playSound('select');
-        rulesModal.classList.add('hidden');
-    });
-    // Close modal on background click
-    rulesModal.addEventListener('click', (e) => {
-        if (e.target === rulesModal) {
-            rulesModal.classList.add('hidden');
-        }
-    });
+    };
 }
 
 function setupBetSelectors() {
-    betAmountButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
+    betButtons.forEach(btn => {
+        btn.onclick = () => {
             if (isDrawing) return;
-            playSound('select');
             betAmountPerCard = parseInt(btn.dataset.amount);
-            betAmountButtons.forEach(b => b.classList.remove('active'));
+            betButtons.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            updateUI();
-        });
+            playSound('hop');
+        };
     });
 }
 
+function setupModals() {
+    // Payment Modal
+    refillBtn.onclick = () => {
+        paymentModal.classList.add('active');
+        playSound('hop');
+    };
+    closeModalBtn.onclick = () => {
+        paymentModal.classList.remove('active');
+    };
+    paymentOptions.forEach(opt => {
+        opt.onclick = () => {
+            const method = opt.dataset.method;
+            paymentModal.classList.remove('active');
+            performRefill(method);
+        };
+    });
+
+    // Help Modal
+    helpBtn.onclick = () => {
+        helpModal.classList.add('active');
+        playSound('hop');
+    };
+    closeHelpBtn.onclick = () => {
+        helpModal.classList.remove('active');
+    };
+    helpModal.onclick = (e) => {
+        if (e.target === helpModal) helpModal.classList.remove('active');
+    };
+}
+
+function performRefill(method) {
+    setBarkerMessage(`"Payment processed via ${method}. The vault is open! Go forth and win!"`);
+    balance = INITIAL_BALANCE;
+    updateUI();
+    playSound('win');
+    resultsArea.innerHTML = `<span class="text-green-500 font-royal text-xl animate-pulse">₱${INITIAL_BALANCE} REFILLED VIA ${method.toUpperCase()}</span>`;
+}
+
+function setupLaunchMechanic() {
+    const startCharging = () => {
+        if (isDrawing || currentBets.length === 0 || balance < (currentBets.length * betAmountPerCard)) return;
+        isCharging = true;
+        chargePower = 0;
+        chargeDirection = 1;
+        drawBtn.innerText = "CHARGING...";
+        chargeInterval = setInterval(() => {
+            chargePower += 2.8 * chargeDirection;
+            if (chargePower >= 100 || chargePower <= 0) chargeDirection *= -1;
+            powerFill.style.width = `${chargePower}%`;
+        }, 16);
+    };
+
+    const stopCharging = () => {
+        if (!isCharging) return;
+        isCharging = false;
+        clearInterval(chargeInterval);
+        handleLaunch(chargePower);
+        drawBtn.innerText = "LAUNCHED!";
+        powerFill.style.width = '0%';
+    };
+
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && !isCharging && !isDrawing) {
+            e.preventDefault();
+            startCharging();
+        }
+    });
+    window.addEventListener('keyup', (e) => {
+        if (e.code === 'Space') {
+            e.preventDefault();
+            stopCharging();
+        }
+    });
+
+    drawBtn.addEventListener('mousedown', startCharging);
+    window.addEventListener('mouseup', stopCharging);
+    drawBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startCharging(); }, {passive: false});
+    drawBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopCharging(); }, {passive: false});
+}
+
 function renderCards() {
+    const ball0 = document.getElementById('ball-0');
+    const ball1 = document.getElementById('ball-1');
+    const ball2 = document.getElementById('ball-2');
+    
     cardGrid.innerHTML = '';
+    cardGrid.appendChild(ball0);
+    cardGrid.appendChild(ball1);
+    cardGrid.appendChild(ball2);
+
     cards.forEach(card => {
         const btn = document.createElement('button');
         btn.id = `card-${card.id}`;
-        btn.className = `perya-card aspect-[2.5/3.5] relative flex flex-col items-center justify-center p-2`;
+        btn.className = 'perya-card aspect-[2.5/3.5] flex flex-col items-center justify-center';
+        btn.onclick = () => handleCardClick(card.id);
+        const rankName = RANK_NAMES[card.rank];
+        const suitName = SUIT_NAMES[card.suit];
+        const symbol = SYMBOLS[card.suit];
         
         btn.innerHTML = `
-            <!-- Top Corner -->
-            <div class="absolute top-2 left-2 font-card font-bold text-lg flex flex-col items-center leading-none ${COLORS[card.suit]}">
-                <span>${card.rank}</span>
-                <span class="text-xs">${SYMBOLS[card.suit]}</span>
-            </div>
-            
-            <!-- Center Large Graphic -->
-            <div class="text-7xl ${COLORS[card.suit]} drop-shadow-[0_2px_2px_rgba(0,0,0,0.1)] scale-110">${SYMBOLS[card.suit]}</div>
-            
-            <!-- Bottom Corner -->
-            <div class="absolute bottom-2 right-2 font-card font-bold text-lg flex flex-col items-center rotate-180 leading-none ${COLORS[card.suit]}">
-                <span>${card.rank}</span>
-                <span class="text-xs">${SYMBOLS[card.suit]}</span>
-            </div>
-
-            <!-- BET TAG -->
-            <div class="bet-tag absolute inset-0 flex items-center justify-center bg-yellow-400/20 backdrop-blur-[1px] opacity-0 transition-opacity pointer-events-none">
-                 <div class="bg-yellow-400 text-slate-900 px-3 py-1 rounded-full font-perya text-[10px] shadow-lg border-2 border-slate-900 tracking-tighter transform -rotate-12">ACTIVE BET</div>
-            </div>
+            <div class="card-tooltip">${rankName} of ${suitName} ${symbol}</div>
+            <div class="absolute top-3 left-3 font-card text-xl font-black leading-none ${COLORS[card.suit]}">${card.rank}</div>
+            <div class="text-6xl ${COLORS[card.suit]} drop-shadow-md transition-transform group-hover:scale-110">${symbol}</div>
+            <div class="absolute bottom-3 right-3 font-card text-xl font-black rotate-180 leading-none ${COLORS[card.suit]}">${card.rank}</div>
+            <div class="bet-badge">ACTIVE BET</div>
         `;
-        
-        btn.addEventListener('click', () => {
-            playSound('select');
-            handleCardClick(card.id);
-        });
         cardGrid.appendChild(btn);
     });
 }
 
 function handleCardClick(id) {
     if (isDrawing) return;
-    const index = currentBets.indexOf(id);
-    if (index > -1) {
-        currentBets.splice(index, 1);
+    const idx = currentBets.indexOf(id);
+    if (idx > -1) {
+        currentBets.splice(idx, 1);
     } else if (currentBets.length < MAX_BETS) {
         currentBets.push(id);
+        playSound('hop');
     }
     updateUI();
 }
@@ -210,150 +244,185 @@ function handleCardClick(id) {
 function updateUI() {
     balanceTxt.innerText = balance.toLocaleString();
     betCountTxt.innerText = `${currentBets.length} / ${MAX_BETS}`;
-    const totalCost = currentBets.length * betAmountPerCard;
-    totalBetDisplay.innerText = `TOTAL BET: $${totalCost.toLocaleString()}`;
-    drawBtn.disabled = currentBets.length === 0 || isDrawing || balance < totalCost;
-    betAmountButtons.forEach(btn => btn.disabled = isDrawing);
-    refillBtn.classList.toggle('hidden', balance >= 10);
-
+    drawBtn.disabled = currentBets.length === 0 || isDrawing || balance < (currentBets.length * betAmountPerCard);
+    if (!isDrawing && !isCharging) drawBtn.innerText = "HOLD [SPACE]";
+    refillBtn.classList.toggle('hidden', balance < 10);
+    
     cards.forEach(c => {
         const el = document.getElementById(`card-${c.id}`);
-        const isSelected = currentBets.includes(c.id);
-        el.classList.toggle('selected', isSelected);
-        el.querySelector('.bet-tag').style.opacity = isSelected ? '1' : '0';
+        el.classList.toggle('selected', currentBets.includes(c.id));
     });
 }
 
-async function handleDraw() {
+async function handleLaunch(power) {
+    if (isDrawing) return;
     const totalCost = currentBets.length * betAmountPerCard;
-    if (balance < totalCost || isDrawing) return;
-
     isDrawing = true;
     balance -= totalCost;
     updateUI();
 
-    // Start Draw Effects
-    document.querySelectorAll('.perya-card').forEach(c => {
-        c.classList.remove('winning');
-        c.classList.add('drawing');
-    });
+    setBarkerMessage(`"The Triple Drop is unleashed! Energy level: ${Math.round(power)}%!"`);
+    resultsArea.innerHTML = '<span class="text-amber-500 font-royal text-xl animate-pulse tracking-widest uppercase">Orbs in Motion</span>';
     
-    setBarkerMessage("Ladies and Gentlemen, place your eyes on the shuffle! The magic is happening!");
-    resultsArea.innerHTML = `
-        <div class="flex flex-col items-center justify-center animate-pulse">
-            <div class="text-yellow-400 font-perya text-3xl tracking-widest drop-shadow-md">SHUFFLING...</div>
-            <div class="text-[12px] text-slate-400 font-bold uppercase tracking-[0.5em] mt-2">Breathe in... Good Luck!</div>
-        </div>
-    `;
+    document.querySelectorAll('.perya-card').forEach(el => el.classList.remove('winner', 'active', 'loser'));
+    
+    activeBallsFinished = 0;
+    winningIndices = [];
 
-    // Dramatic draw sound loop
-    const drawInterval = setInterval(() => playSound('draw'), 100);
-    await new Promise(r => setTimeout(r, 2200));
-    clearInterval(drawInterval);
+    ballIds.forEach(id => {
+        const ballEl = document.getElementById(`ball-${id}`);
+        ballEl.style.display = 'block';
+        
+        let currentIdx = -1;
+        let momentum = 12 + (power / 5) + Math.random() * 8;
+        let decay = 0.88 + (Math.random() * 0.05); 
+        let currentHop = 0;
+        const totalHops = 18 + Math.floor(Math.random() * 10);
+        
+        let driftX = (Math.random() - 0.5) * 40;
+        let driftY = (Math.random() - 0.5) * 40;
 
-    // Stop shakes
-    document.querySelectorAll('.perya-card').forEach(c => c.classList.remove('drawing'));
+        const performHop = () => {
+            if (currentIdx !== -1) {
+                document.getElementById(`card-${cards[currentIdx].id}`).classList.remove('active');
+            }
+            
+            let nextIdx;
+            const progress = currentHop / totalHops;
+            if (progress < 0.4 || Math.random() > 0.7) {
+                nextIdx = Math.floor(Math.random() * cards.length);
+            } else {
+                nextIdx = (currentIdx + (Math.random() > 0.5 ? 1 : -1) + cards.length) % cards.length;
+            }
+            
+            currentIdx = nextIdx;
+            const target = document.getElementById(`card-${cards[currentIdx].id}`);
+            target.classList.add('active');
 
-    const shuffled = [...cards].sort(() => 0.5 - Math.random());
-    const winCards = shuffled.slice(0, 3);
+            const jitterFactor = Math.max(0, 1 - progress);
+            const jitterX = (Math.random() - 0.5) * 50 * jitterFactor;
+            const jitterY = (Math.random() - 0.5) * 50 * jitterFactor;
+            const ballOffset = (id - 1) * 14;
 
+            const ballX = target.offsetLeft + (target.offsetWidth / 2) - 18 + ballOffset + jitterX + driftX * jitterFactor;
+            const ballY = target.offsetTop + (target.offsetHeight / 2) - 18 + ballOffset + jitterY + driftY * jitterFactor;
+            
+            const hopHeight = momentum * (5 + Math.random() * 3);
+            
+            const duration = 0.12 + (0.8 / (momentum + 1));
+            const easing = progress < 0.7 
+                ? 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
+                : 'cubic-bezier(0.34, 1.56, 0.64, 1)'; 
+
+            ballEl.style.transition = `transform ${duration}s ${easing}`;
+            ballEl.style.transform = `translate(${ballX}px, ${ballY}px) translateZ(${hopHeight}px)`;
+            
+            playSound('hop');
+
+            momentum *= decay;
+            currentHop++;
+
+            if (currentHop < totalHops) {
+                const delay = (duration * 1000) + (progress * 150);
+                setTimeout(performHop, delay);
+            } else {
+                winningIndices.push(currentIdx);
+                target.classList.remove('active');
+                target.classList.add('winner');
+                
+                const finalX = target.offsetLeft + (target.offsetWidth / 2) - 18 + ballOffset;
+                const finalY = target.offsetTop + (target.offsetHeight / 2) - 18 + ballOffset;
+                
+                ballEl.style.transition = `transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)`;
+                ballEl.style.transform = `translate(${finalX}px, ${finalY}px) translateZ(0px)`;
+                
+                activeBallsFinished++;
+                if (activeBallsFinished === 3) finalize();
+            }
+        };
+        performHop();
+    });
+}
+
+function finalize() {
     let matches = 0;
-    winCards.forEach(wc => {
+    const winList = winningIndices.map(i => cards[i]);
+    
+    winList.forEach(wc => {
         if (currentBets.includes(wc.id)) matches++;
     });
 
-    let multiplier = matches === 1 ? 2 : matches === 2 ? 4 : matches === 3 ? 10 : 0;
-    const totalWinnings = multiplier * betAmountPerCard;
-    balance += totalWinnings;
+    // Mark losing bets
+    currentBets.forEach(betId => {
+        const isWinner = winList.some(wc => wc.id === betId);
+        if (!isWinner) {
+            const el = document.getElementById(`card-${betId}`);
+            if (el) el.classList.add('loser');
+        }
+    });
 
-    if (totalWinnings > 0) playSound('win');
-    else playSound('lose');
+    const winAmount = (matches > 0) ? (matches + 1) * betAmountPerCard : 0;
+    balance += winAmount;
+
+    if (winAmount > 0) playSound('win'); else playSound('lose');
 
     resultsArea.innerHTML = '';
-    winCards.forEach((wc, i) => {
-        const resCard = document.createElement('div');
+    winList.forEach((wc, i) => {
+        const div = document.createElement('div');
         const isMatch = currentBets.includes(wc.id);
-        
-        resCard.className = `w-24 h-32 bg-[#fff9f0] rounded-xl flex flex-col items-center justify-center border-4 ${isMatch ? 'border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.5)]' : 'border-slate-400'} shadow-xl relative result-card-celebrate`;
-        resCard.style.animationDelay = `${i * 0.25}s`;
-        
-        resCard.innerHTML = `
-            <div class="absolute top-1 left-1 font-card font-bold text-[10px] leading-none ${COLORS[wc.suit]}">${wc.rank}</div>
-            <div class="text-4xl ${COLORS[wc.suit]}">${SYMBOLS[wc.suit]}</div>
-            <div class="absolute bottom-1 right-1 font-card font-bold text-[10px] rotate-180 leading-none ${COLORS[wc.suit]}">${wc.rank}</div>
-            ${isMatch ? '<div class="absolute -top-3 -right-3 bg-emerald-500 text-white rounded-full p-1 shadow-lg text-[8px] font-bold">MATCH!</div>' : ''}
+        div.className = `result-card-anim w-20 h-28 bg-[#fffdf7] rounded-lg flex flex-col items-center justify-center border-2 border-[#d4af37] shadow-lg ${isMatch ? 'ring-4 ring-amber-400' : ''}`;
+        div.style.animationDelay = `${i * 0.15}s`;
+        div.innerHTML = `
+            <div class="text-[12px] font-bold ${COLORS[wc.suit]}">${wc.rank}</div>
+            <div class="text-3xl ${COLORS[wc.suit]}">${SYMBOLS[wc.suit]}</div>
+            <div class="text-[8px] font-bold text-stone-600 mt-1 uppercase tracking-tighter">${isMatch ? 'WINNER!' : 'Landed'}</div>
         `;
-        resultsArea.appendChild(resCard);
-        
-        if (isMatch) {
-            const boardCard = document.getElementById(`card-${wc.id}`);
-            if (boardCard) boardCard.classList.add('winning');
-        }
+        resultsArea.appendChild(div);
     });
 
     isDrawing = false;
     updateUI();
-    getBarkerCommentary(totalWinnings > 0 ? 'WIN' : 'LOSS', winCards, totalWinnings);
+    getBarkerCommentary(winAmount > 0 ? 'WIN' : 'LOSS', winList, winAmount);
 }
 
 async function getBarkerCommentary(outcome, winners, amount) {
     if (!process.env.API_KEY) {
-        setBarkerMessage(outcome === 'WIN' ? `WINNER WINNER! You scooped up $${amount}!` : "No luck this time! The table is ready for your next play!");
+        setBarkerMessage(outcome === 'WIN' ? `Marvelous! You've claimed ₱${amount} from the royal treasury!` : "Fate has spoken. Better luck on the next drop, traveler!");
         return;
     }
-
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `
-        Context: You are a theatrical, high-energy Carnival Barker. 
-        The player just ${outcome === 'WIN' ? 'won $' + amount : 'lost their bet'}.
-        Winning combo: ${winners.map(w => w.rank + ' of ' + w.suit).join(', ')}.
-        Task: Give a very energetic 1-sentence reaction. Use phrases like "Unbelievable!", "Grand Fiesta indeed!", "Step up for another go!".
-        Language: English only.
-    `;
-
     try {
+        const winStr = winners.map(w => w.rank + ' ' + w.suit).join(', ');
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
-            contents: prompt
+            contents: `Game result: ${winStr}. Player ${outcome === 'WIN' ? 'won ₱' + amount : 'lost'}. Give a 1-sentence, high-energy, royal casino barker reaction strictly in English.`
         });
-        setBarkerMessage(response.text || "Step right up! Who will be our next grand winner?");
+        setBarkerMessage(response.text);
     } catch (e) {
-        setBarkerMessage(outcome === 'WIN' ? "Spectacular win! You've got the golden touch!" : "Fortune is a fickle mistress! Try your hand again!");
+        setBarkerMessage(outcome === 'WIN' ? "A splendid victory! The orbs have favored you!" : "The orbs are silent this time. Fortune favors the bold—try again!");
     }
 }
 
 function setBarkerMessage(msg) {
-    barkerBox.classList.add('scale-105');
-    setTimeout(() => barkerBox.classList.remove('scale-105'), 200);
     dealerMsg.innerText = msg;
+    if (avatarMouth) {
+        avatarMouth.classList.add('speaking');
+        setTimeout(() => avatarMouth.classList.remove('speaking'), 3500);
+    }
 }
 
-drawBtn.addEventListener('click', handleDraw);
-
-resetBtn.addEventListener('click', () => {
+resetBtn.onclick = () => {
     if (isDrawing) return;
-    playSound('select');
     currentBets = [];
-    resultsArea.innerHTML = `
-        <div class="flex gap-4 opacity-5">
-            <div class="w-24 h-32 bg-slate-600 rounded-xl"></div>
-            <div class="w-24 h-32 bg-slate-600 rounded-xl"></div>
-            <div class="w-24 h-32 bg-slate-600 rounded-xl"></div>
-        </div>
-    `;
-    document.querySelectorAll('.perya-card').forEach(c => {
-        c.classList.remove('winning');
-        c.classList.remove('drawing');
+    winningIndices = [];
+    resultsArea.innerHTML = '<span class="text-amber-600/20 font-royal text-xl self-center uppercase tracking-widest animate-pulse">Destiny Awaits</span>';
+    ballIds.forEach(id => {
+        const b = document.getElementById(`ball-${id}`);
+        if(b) b.style.display = 'none';
     });
-    setBarkerMessage("The table is reset and fresh! Lady Luck awaits your next choice.");
+    document.querySelectorAll('.perya-card').forEach(el => el.classList.remove('winner', 'active', 'selected', 'loser'));
     updateUI();
-});
-
-refillBtn.addEventListener('click', () => {
-    playSound('win');
-    balance = INITIAL_BALANCE;
-    setBarkerMessage("A fresh stack of bills for the lucky player! Don't spend it all in one place!");
-    updateUI();
-});
+    playSound('hop');
+};
 
 init();
