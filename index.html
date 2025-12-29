@@ -66,6 +66,17 @@
             background: white;
             transform: rotate(45deg);
         }
+        .bet-chip {
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .bet-chip.active {
+            background-color: #facc15;
+            color: #1e293b;
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(250, 204, 21, 0.8);
+            border-color: #b45309;
+        }
     </style>
 <script type="importmap">
 {
@@ -119,6 +130,16 @@
                     <p id="dealer-msg" class="text-lg font-bold italic leading-tight">
                         "Mano-mano na tayo! Taya na kayo sa maswerteng baraha!"
                     </p>
+                </div>
+
+                <!-- Bet Selection -->
+                <div class="bg-slate-800 p-4 rounded-3xl border-2 border-slate-700 shadow-xl">
+                    <h3 class="text-center text-slate-400 text-xs tracking-widest font-bold mb-3 uppercase">Bet Per Card</h3>
+                    <div id="bet-amount-selector" class="flex justify-center gap-4">
+                        <button data-amount="10" class="bet-chip active w-12 h-12 rounded-full border-2 border-slate-600 flex items-center justify-center font-perya text-sm bg-slate-900">10</button>
+                        <button data-amount="20" class="bet-chip w-12 h-12 rounded-full border-2 border-slate-600 flex items-center justify-center font-perya text-sm bg-slate-900">20</button>
+                        <button data-amount="50" class="bet-chip w-12 h-12 rounded-full border-2 border-slate-600 flex items-center justify-center font-perya text-sm bg-slate-900">50</button>
+                    </div>
                 </div>
 
                 <!-- Latest Results -->

@@ -3,7 +3,6 @@ import { GoogleGenAI } from "@google/genai";
 
 // Configuration
 const INITIAL_BALANCE = 1000;
-const BET_COST = 10;
 const MAX_BETS = 3;
 const SUITS = ['HEARTS', 'SPADES', 'DIAMONDS'];
 const RANKS = ['J', 'Q', 'K', 'A'];
@@ -15,6 +14,7 @@ let balance = INITIAL_BALANCE;
 let currentBets = []; 
 let isDrawing = false;
 let cards = [];
+let betAmountPerCard = 10;
 
 // DOM Elements
 const cardGrid = document.getElementById('card-grid');
@@ -25,6 +25,7 @@ const resultsArea = document.getElementById('results-area');
 const drawBtn = document.getElementById('draw-btn');
 const resetBtn = document.getElementById('reset-btn');
 const refillBtn = document.getElementById('refill-btn');
+const betAmountButtons = document.querySelectorAll('#bet-amount-selector button');
 
 // Initialize Cards Pool (12 cards total)
 SUITS.forEach(suit => {
@@ -36,6 +37,22 @@ SUITS.forEach(suit => {
 function init() {
     renderCards();
     updateUI();
+    setupBetSelectors();
+}
+
+function setupBetSelectors() {
+    betAmountButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (isDrawing) return;
+            betAmountPerCard = parseInt(btn.dataset.amount);
+            
+            // UI update for buttons
+            betAmountButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            updateUI();
+        });
+    });
 }
 
 function renderCards() {
@@ -72,8 +89,14 @@ function handleCardClick(id) {
 function updateUI() {
     balanceTxt.innerText = balance;
     betCountTxt.innerText = `${currentBets.length} / ${MAX_BETS}`;
-    drawBtn.disabled = currentBets.length === 0 || isDrawing;
-    refillBtn.classList.toggle('hidden', balance >= BET_COST);
+    
+    const totalCost = currentBets.length * betAmountPerCard;
+    drawBtn.disabled = currentBets.length === 0 || isDrawing || balance < totalCost;
+    
+    // Also disable bet selectors while drawing
+    betAmountButtons.forEach(btn => btn.disabled = isDrawing);
+
+    refillBtn.classList.toggle('hidden', balance >= 10); // Check for min possible bet
 
     cards.forEach(c => {
         const el = document.getElementById(`card-${c.id}`);
@@ -84,11 +107,11 @@ function updateUI() {
 }
 
 async function handleDraw() {
-    const cost = currentBets.length * BET_COST;
-    if (balance < cost) return;
+    const totalCost = currentBets.length * betAmountPerCard;
+    if (balance < totalCost) return;
 
     isDrawing = true;
-    balance -= cost;
+    balance -= totalCost;
     updateUI();
 
     dealerMsg.innerText = "Bola na! Sino kaya ang swerte?!";
@@ -107,7 +130,7 @@ async function handleDraw() {
     });
 
     let multiplier = matches === 1 ? 2 : matches === 2 ? 4 : matches === 3 ? 10 : 0;
-    const winnings = multiplier * BET_COST;
+    const winnings = multiplier * betAmountPerCard;
     balance += winnings;
 
     // Display
@@ -140,6 +163,7 @@ async function getBarkerTalk(outcome, winners, amount) {
         You are a charismatic Filipino Perya Barker. 
         The player just ${outcome === 'WIN' ? 'won ' + amount + ' pesos' : 'lost'}.
         Winning cards: ${winners.map(w => w.rank + ' of ' + w.suit).join(', ')}.
+        The player was betting ${betAmountPerCard} pesos per card.
         Speak in energetic Taglish (Tagalog-English). Short and lively!
     `;
 
