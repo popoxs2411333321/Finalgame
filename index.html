@@ -7,20 +7,149 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Inter:wght@400;700&family=Playfair+Display:wght@900&family=Cinzel+Decorative:wght@700;900&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --fiesta-red: #ef4444;
+            --fiesta-yellow: #fbbf24;
+            --fiesta-blue: #3b82f6;
+            --fiesta-green: #22c55e;
+            --fiesta-pink: #ec4899;
+            --card-bg: #e5dcc3;
+            --card-border-outer: #451a03;
+            --card-border-inner: #fbbf24;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0c0a09;
+            background-color: #0f172a;
             color: #f8fafc;
             margin: 0;
             overflow-x: hidden;
-            background: 
-                radial-gradient(circle at 50% 0%, rgba(120, 53, 15, 0.25) 0%, transparent 70%),
-                radial-gradient(circle at 50% 100%, rgba(20, 20, 25, 1) 0%, transparent 100%),
-                url('https://www.transparenttextures.com/patterns/black-linen.png'),
-                linear-gradient(to bottom, #1c1917, #080706);
-            background-attachment: fixed;
+            background: linear-gradient(to bottom, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%);
             min-height: 100vh;
+            position: relative;
         }
+
+        /* --- Live Background Elements --- */
+        
+        .live-bg-container {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .rays {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 300vw;
+            height: 300vw;
+            transform: translate(-50%, -50%);
+            background: conic-gradient(
+                from 0deg,
+                transparent 0deg,
+                rgba(251, 191, 36, 0.03) 10deg,
+                transparent 20deg,
+                rgba(236, 72, 153, 0.03) 30deg,
+                transparent 40deg
+            );
+            animation: rotate-rays 100s linear infinite;
+        }
+
+        @keyframes rotate-rays {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .confetti {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: var(--color);
+            opacity: 0.6;
+            border-radius: 2px;
+            animation: confetti-fall var(--duration) linear infinite;
+        }
+
+        @keyframes confetti-fall {
+            0% { transform: translateY(-10vh) translateX(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.6; }
+            100% { transform: translateY(110vh) translateX(100px) rotate(720deg); opacity: 0; }
+        }
+
+        .crowd-container {
+            position: absolute;
+            bottom: -20px;
+            left: 0;
+            width: 100%;
+            height: 150px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            opacity: 0.3;
+            filter: blur(2px);
+        }
+
+        .person-silhouette {
+            width: 40px;
+            height: 80px;
+            background: #000;
+            border-radius: 20px 20px 0 0;
+            position: relative;
+            animation: crowd-sway var(--speed) ease-in-out infinite alternate;
+        }
+        .person-silhouette::before {
+            content: '';
+            position: absolute;
+            top: -25px;
+            left: 5px;
+            width: 30px;
+            height: 30px;
+            background: #000;
+            border-radius: 50%;
+        }
+
+        @keyframes crowd-sway {
+            from { transform: translateY(5px) rotate(-2deg); }
+            to { transform: translateY(0px) rotate(2deg); }
+        }
+
+        /* --- New Card Name Banner --- */
+        #active-card-banner {
+            min-height: 4rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Bungee', cursive;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        #active-card-banner.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .neon-text-red {
+            color: #ef4444;
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.8), 0 0 20px rgba(239, 68, 68, 0.4);
+            animation: flicker 2s infinite;
+        }
+        .neon-text-white {
+            color: #f8fafc;
+            text-shadow: 0 0 10px rgba(248, 250, 252, 0.8), 0 0 20px rgba(248, 250, 252, 0.4);
+            animation: flicker 3s infinite;
+        }
+
+        @keyframes flicker {
+            0%, 18%, 22%, 25%, 53%, 57%, 100% { opacity: 1; }
+            20%, 24%, 55% { opacity: 0.8; }
+        }
+
+        /* --- Game UI Styles --- */
 
         .font-perya { font-family: 'Bungee', cursive; }
         .font-card { font-family: 'Playfair Display', serif; }
@@ -30,188 +159,144 @@
             background: linear-gradient(to bottom, #fffbeb 10%, #fbbf24 40%, #d97706 70%, #78350f 95%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 15px rgba(251, 191, 36, 0.4));
+            filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.8));
             animation: title-shimmer 4s infinite linear;
             background-size: 200% auto;
         }
 
         @keyframes title-shimmer { to { background-position: 200% center; } }
 
-        #table-container {
-            perspective: 2000px;
-            padding: 2rem;
-        }
-        
         #table-surface {
-            background: #064e3b; 
+            background: radial-gradient(circle at 50% 50%, #059669 0%, #064e3b 100%); 
             padding: 2.5rem;
             border-radius: 4rem;
-            border: 18px solid #292524; 
+            border: 20px solid #2d0a01;
             box-shadow: 
-                0 60px 120px rgba(0,0,0,1), 
-                inset 0 0 180px rgba(0,0,0,0.8),
-                0 0 0 4px #451a03;
-            transform: rotateX(22deg);
+                0 60px 100px rgba(0,0,0,0.9), 
+                inset 0 0 100px rgba(0,0,0,0.6),
+                0 0 0 6px #fbbf24,
+                0 0 40px rgba(251, 191, 36, 0.3);
+            transform: rotateX(20deg);
             transform-style: preserve-3d;
             transition: transform 0.5s ease;
         }
 
-        .card-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1.5rem;
-            transform-style: preserve-3d;
-        }
-
-        /* Glassy Card Design refined */
         .perya-card {
             transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            user-select: none;
-            position: relative;
-            background: rgba(255, 253, 247, 0.95); /* Ivory Glass */
+            background-color: var(--card-bg);
+            background-image: 
+                linear-gradient(135deg, rgba(0,0,0,0.05) 0%, transparent 100%),
+                url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000' fill-opacity='0.03' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
             border-radius: 0.8rem;
-            border: 4px solid #d4af37;
+            border: 3px solid var(--card-border-outer);
             box-shadow: 
-                0 10px 20px rgba(0,0,0,0.4),
-                inset 0 0 10px rgba(0,0,0,0.05);
+                0 10px 20px rgba(0,0,0,0.5),
+                inset 0 0 0 2px rgba(251, 191, 36, 0.4);
             cursor: pointer;
             transform-style: preserve-3d;
-            overflow: visible;
+            position: relative;
+            overflow: visible; 
         }
 
-        /* Tooltip Style */
+        /* Tooltip Styling */
         .card-tooltip {
             position: absolute;
-            top: -50px;
+            top: -45px;
             left: 50%;
             transform: translateX(-50%) translateY(10px);
-            background: rgba(12, 10, 9, 0.95);
-            border: 1px solid #fbbf24;
+            background: rgba(0,0,0,0.9);
             color: #fbbf24;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 0.75rem;
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 0.7rem;
             font-weight: bold;
             white-space: nowrap;
-            pointer-events: none;
             opacity: 0;
+            pointer-events: none;
             transition: all 0.2s ease;
-            box-shadow: 0 10px 15px rgba(0,0,0,0.5);
+            border: 1px solid #fbbf24;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
             z-index: 50;
         }
-
         .perya-card:hover .card-tooltip {
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
 
-        /* Golden Pulse for interactivity */
-        @keyframes golden-pulse {
-            0% { 
-                box-shadow: 0 10px 20px rgba(0,0,0,0.4), 0 0 0px #fbbf24;
-                transform: translateZ(12px) scale(1.03);
-                filter: brightness(1);
-            }
-            50% { 
-                box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 25px rgba(251, 191, 36, 0.8);
-                transform: translateZ(18px) scale(1.05);
-                filter: brightness(1.15);
-            }
-            100% { 
-                box-shadow: 0 10px 20px rgba(0,0,0,0.4), 0 0 0px #fbbf24;
-                transform: translateZ(12px) scale(1.03);
-                filter: brightness(1);
-            }
+        .perya-card::after {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            right: 4px;
+            bottom: 4px;
+            border: 1px solid var(--card-border-inner);
+            border-radius: 0.5rem;
+            pointer-events: none;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
         }
 
-        .perya-card:hover:not(.selected):not(.active) {
-            animation: golden-pulse 1.8s infinite cubic-bezier(0.45, 0, 0.55, 1);
+        .perya-card:hover::after { opacity: 1; }
+
+        .card-corner {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--card-border-inner);
+            z-index: 5;
+            pointer-events: none;
+        }
+        .corner-tl { top: 6px; left: 6px; border-right: 0; border-bottom: 0; }
+        .corner-tr { top: 6px; right: 6px; border-left: 0; border-bottom: 0; }
+        .corner-bl { bottom: 6px; left: 6px; border-right: 0; border-top: 0; }
+        .corner-br { bottom: 6px; right: 6px; border-left: 0; border-top: 0; }
+
+        .perya-card.selected {
             border-color: #fbbf24;
+            animation: float-lively 3.0s ease-in-out infinite;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.7), 0 0 30px rgba(251, 191, 36, 0.6);
+            z-index: 10;
+            background-color: #f3ecd9;
         }
 
-        /* Lively Floating Animation for Selected Cards */
         @keyframes float-lively {
             0% { transform: translateZ(35px) translateY(0px) rotateX(2deg); }
             50% { transform: translateZ(45px) translateY(-8px) rotateX(-2deg); }
             100% { transform: translateZ(35px) translateY(0px) rotateX(2deg); }
         }
 
-        .perya-card.selected {
-            border-color: #fbbf24;
-            animation: float-lively 3.0s ease-in-out infinite;
-            background-color: #fefce8;
-            box-shadow: 
-                0 30px 60px rgba(0,0,0,0.6),
-                0 0 30px rgba(251, 191, 36, 0.4);
-            z-index: 10;
-        }
-
-        /* Bet Badge style from image */
         .bet-badge {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%) rotate(-10deg);
-            background: #fbbf24;
-            color: #1c1917;
+            background: #ef4444;
+            color: #fff;
             padding: 4px 12px;
             border-radius: 9999px;
             font-family: 'Bungee', cursive;
             font-size: 0.6rem;
-            white-space: nowrap;
-            border: 2px solid #451a03;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border: 2px solid #fff;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
             opacity: 0;
-            transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.3s ease;
             pointer-events: none;
             z-index: 20;
         }
 
-        .selected .bet-badge {
-            opacity: 1;
-            transform: translate(-50%, -50%) rotate(-8deg) scale(1.1);
-        }
+        .selected .bet-badge { opacity: 1; transform: translate(-50%, -50%) rotate(-8deg) scale(1.1); }
 
-        .perya-card.active {
-            background-color: #fff;
-            border-color: #fff;
-            box-shadow: 0 0 80px #fbbf24;
-            transform: translateZ(60px) scale(1.15);
-        }
-
-        .perya-card.winner {
-            animation: winner-glow-intense 0.6s infinite alternate cubic-bezier(0.45, 0, 0.55, 1);
-            z-index: 100;
-        }
-
-        /* Loser State: Subtle desaturation and a 'shudder' */
-        @keyframes loser-shudder {
-            0% { transform: translateZ(0px) rotate(0deg); }
-            25% { transform: translateZ(-5px) rotate(-2deg); }
-            50% { transform: translateZ(-8px) rotate(2deg); }
-            75% { transform: translateZ(-5px) rotate(-1deg); }
-            100% { transform: translateZ(-2px) rotate(0deg); }
+        .perya-card.winner { animation: winner-glow-intense 0.6s infinite alternate; z-index: 100; }
+        @keyframes winner-glow-intense {
+            from { transform: translateZ(50px) scale(1.1); box-shadow: 0 0 50px #fbbf24; }
+            to { transform: translateZ(70px) scale(1.2); box-shadow: 0 0 100px #fbbf24; }
         }
 
         .perya-card.loser {
-            filter: grayscale(0.8) opacity(0.6);
+            filter: grayscale(0.8) opacity(0.5);
+            transform: translateZ(-10px);
             border-color: #44403c;
-            animation: loser-shudder 0.6s cubic-bezier(0.45, 0, 0.55, 1) forwards;
-            background-color: #e5e7eb;
-            z-index: 5;
-        }
-
-        @keyframes winner-glow-intense {
-            from { 
-                transform: translateZ(50px) scale(1.15); 
-                box-shadow: 0 0 50px #fbbf24, 0 0 100px rgba(251, 191, 36, 0.3);
-                filter: brightness(1.1);
-            }
-            to { 
-                transform: translateZ(80px) scale(1.25); 
-                box-shadow: 0 0 120px #fbbf24, 0 0 200px rgba(251, 191, 36, 0.6);
-                filter: brightness(1.3);
-            }
         }
 
         .selection-ball {
@@ -220,146 +305,82 @@
             height: 36px;
             background: radial-gradient(circle at 35% 35%, #fff 0%, #fbbf24 40%, #b45309 80%, #451a03 100%);
             border-radius: 50%;
-            box-shadow: 0 40px 60px rgba(0,0,0,0.9), inset -4px -4px 10px rgba(0,0,0,0.6);
+            box-shadow: 0 30px 50px rgba(0,0,0,0.8);
             z-index: 200;
             display: none;
             pointer-events: none;
         }
 
-        .avatar-wrap {
-            width: 80px; height: 80px;
-            position: relative;
-        }
-        .avatar-head {
-            width: 60px; height: 60px;
-            background: #1c1917; border: 3px solid #fbbf24;
-            border-radius: 50%; position: absolute; bottom: 0; left: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-        }
-        .avatar-eye { width: 8px; height: 8px; background: #fbbf24; border-radius: 50%; position: absolute; top: 15px; }
-        .avatar-eye.left { left: 15px; } .avatar-eye.right { right: 15px; }
-        .avatar-mouth { width: 20px; height: 3px; background: #fbbf24; position: absolute; bottom: 12px; left: 20px; border-radius: 2px; }
-        .avatar-mouth.speaking { animation: mouth-move 0.2s infinite alternate; }
-        @keyframes mouth-move { from { height: 2px; } to { height: 10px; } }
-
-        .power-meter-container {
-            width: 100%;
-            height: 16px;
-            background: #0c0a09;
-            border-radius: 8px;
-            border: 2px solid #78350f;
-            overflow: hidden;
-            margin-bottom: 0.5rem;
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.8);
-        }
-        #power-fill {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(to right, #15803d, #eab308, #b91c1c);
-            box-shadow: 0 0 15px rgba(251, 191, 36, 0.5);
-            transition: width 0.05s linear;
+        .glass-pane {
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(251, 191, 36, 0.3);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5), 0 0 15px rgba(251, 191, 36, 0.1);
         }
 
-        .bet-chip {
-            transition: all 0.3s ease;
-            cursor: pointer;
-            background: #1c1917;
-            border: 2px solid #44403c;
-            color: #d6d3d1;
-            box-shadow: 0 4px 0 #000;
-        }
-        .bet-chip.active {
-            background: linear-gradient(135deg, #fcd34d, #b45309);
-            color: #1c1917;
-            transform: translateY(-4px) scale(1.15);
-            box-shadow: 0 8px 25px rgba(251, 191, 36, 0.6), 0 0 0 2px #78350f;
-            border-color: #fffbeb;
-        }
-        
-        #results-area {
-            perspective: 1000px;
-        }
-
-        .result-card-anim {
-            animation: card-reveal 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-            opacity: 0;
-            transform: rotateY(-90deg) scale(0.5);
-        }
-        @keyframes card-reveal {
-            to { opacity: 1; transform: rotateY(0) scale(1); }
-        }
-
-        #payment-modal, #help-modal {
-            display: none;
+        .bunting {
             position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.85);
-            backdrop-filter: blur(8px);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
+            top: 0; left: 0; width: 100%; height: 50px;
+            display: flex; justify-content: space-around; z-index: 20; pointer-events: none;
         }
-        #payment-modal.active, #help-modal.active {
-            display: flex;
+        .flag {
+            width: 0; height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 35px solid var(--color);
+            animation: sway 4s ease-in-out infinite alternate;
         }
-        .modal-content {
-            background: #1c1917;
-            border: 4px solid #78350f;
-            padding: 2.5rem;
-            border-radius: 2rem;
-            max-width: 500px;
-            width: 90%;
-            box-shadow: 
-                inset 0 0 0 3px #fbbf24,
-                0 30px 60px rgba(0,0,0,1);
-            position: relative;
-            transform: scale(0.9);
-            opacity: 0;
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .active .modal-content {
-            transform: scale(1) !important;
-            opacity: 1 !important;
-        }
-        .payment-option {
-            width: 100%;
-            padding: 1.25rem;
-            margin-bottom: 0.75rem;
-            background: #292524;
-            border: 2px solid #44403c;
-            border-radius: 1rem;
-            font-family: 'Cinzel Decorative', cursive;
-            font-weight: bold;
-            color: #fde68a;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .payment-option:hover {
-            background: #451a03;
-            border-color: #fbbf24;
-            transform: translateX(5px);
-            color: #fff;
-        }
+        @keyframes sway { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
 
         .fullscreen-btn {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            z-index: 50;
-            background: rgba(0,0,0,0.5);
-            border: 1px solid #fbbf24;
-            color: #fbbf24;
-            padding: 0.5rem;
-            border-radius: 0.5rem;
+            position: absolute; top: 1rem; right: 1rem; z-index: 100;
+            background: rgba(0,0,0,0.6); border: 1px solid #fbbf24; color: #fbbf24;
+            padding: 0.6rem; border-radius: 0.5rem; cursor: pointer;
+        }
+
+        #game-container { position: relative; z-index: 30; }
+
+        #power-fill {
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.8);
+        }
+
+        #barker-box {
+            animation: barker-float 5s ease-in-out infinite alternate;
+        }
+        @keyframes barker-float {
+            from { transform: translateY(0); }
+            to { transform: translateY(-8px); }
+        }
+
+        /* Treasury Button */
+        #refill-btn {
+            background: linear-gradient(to bottom, #fde68a, #fbbf24, #b45309);
+            border: 1px solid #451a03;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.4);
+            transition: all 0.2s ease;
+        }
+        #refill-btn:hover {
+            transform: scale(1.1);
+            filter: brightness(1.2);
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.6);
+        }
+
+        /* Treasury Modal Specifics */
+        .vault-pack {
+            background: #1e293b;
+            border: 2px solid #334155;
+            transition: all 0.2s ease;
             cursor: pointer;
-            transition: all 0.2s;
         }
-        .fullscreen-btn:hover {
-            background: #fbbf24;
-            color: #000;
+        .vault-pack:hover { border-color: #fbbf24; background: #0f172a; transform: translateY(-4px); }
+        .vault-pack.active { border-color: #fbbf24; background: #0f172a; box-shadow: 0 0 15px rgba(251, 191, 36, 0.4); }
+
+        .qr-scanner-line {
+            width: 100%; height: 2px; background: #fbbf24; position: absolute;
+            animation: scan 2s ease-in-out infinite; box-shadow: 0 0 10px #fbbf24;
         }
+        @keyframes scan { 0%, 100% { top: 0; } 50% { top: 100%; } }
+
     </style>
 <script type="importmap">
 {
@@ -371,19 +392,47 @@
 </head>
 <body class="p-4 md:p-8">
 
-    <div id="game-container" class="max-w-7xl w-full mx-auto relative">
+    <div class="live-bg-container" id="live-bg">
+        <div class="rays"></div>
+        <div class="crowd-container" id="crowd"></div>
+    </div>
+
+    <div class="bunting">
+        <div class="flag" style="--color: #ef4444"></div>
+        <div class="flag" style="--color: #fbbf24"></div>
+        <div class="flag" style="--color: #3b82f6"></div>
+        <div class="flag" style="--color: #22c55e"></div>
+        <div class="flag" style="--color: #ec4899"></div>
+        <div class="flag" style="--color: #ef4444"></div>
+        <div class="flag" style="--color: #fbbf24"></div>
+        <div class="flag" style="--color: #3b82f6"></div>
+        <div class="flag" style="--color: #22c55e"></div>
+        <div class="flag" style="--color: #ec4899"></div>
+    </div>
+
+    <div id="game-container" class="max-w-7xl w-full mx-auto">
         <button id="fullscreen-toggle" class="fullscreen-btn" title="Toggle Fullscreen">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
         </button>
 
         <header class="text-center mb-8">
             <h1 class="text-6xl md:text-8xl royal-title font-royal tracking-tighter mb-4">PERYA ROYALE</h1>
-            <div class="flex justify-center gap-8">
-                <div class="bg-stone-900/90 border-2 border-amber-600/50 px-8 py-3 rounded-2xl flex items-center shadow-2xl backdrop-blur-md">
-                    <span class="text-amber-500 mr-3 text-2xl font-bold">₱</span>
-                    <span id="balance-txt" class="text-stone-100 text-3xl font-royal">1000</span>
+            
+            <!-- Dynamic Card Name Banner -->
+            <div id="active-card-banner" class="text-3xl md:text-5xl">
+                PICK YOUR DESTINY
+            </div>
+
+            <div class="flex justify-center gap-8 mt-6">
+                <div class="glass-pane px-8 py-3 rounded-2xl flex items-center relative group">
+                    <span class="text-amber-500 mr-3 text-2xl font-bold">🪙</span>
+                    <span id="balance-txt" class="text-stone-100 text-3xl font-royal">0</span>
+                    
+                    <button id="refill-btn" class="ml-4 w-8 h-8 rounded-full flex items-center justify-center text-stone-900 font-bold shadow-lg" title="Royal Treasury">
+                        +
+                    </button>
                 </div>
-                <div class="bg-stone-900/90 border-2 border-amber-600/50 px-8 py-3 rounded-2xl flex items-center shadow-2xl backdrop-blur-md">
+                <div class="glass-pane px-8 py-3 rounded-2xl flex items-center">
                     <span class="text-amber-400 mr-3 text-2xl font-bold">🃏</span>
                     <span id="bet-count-txt" class="text-stone-100 text-3xl font-royal">0 / 3</span>
                 </div>
@@ -393,7 +442,7 @@
         <div class="grid lg:grid-cols-[1fr,400px] gap-10 items-start">
             <section id="table-container">
                 <div id="table-surface">
-                    <div id="card-grid" class="card-grid">
+                    <div id="card-grid" class="grid grid-cols-4 gap-4 transform-style-3d">
                         <div id="ball-0" class="selection-ball"></div>
                         <div id="ball-1" class="selection-ball"></div>
                         <div id="ball-2" class="selection-ball"></div>
@@ -402,21 +451,21 @@
             </section>
 
             <aside class="flex flex-col gap-6">
-                <div id="barker-box" class="bg-stone-50 p-6 rounded-[2.5rem] border-4 border-amber-600 shadow-[0_20px_40px_rgba(0,0,0,0.5)] flex items-center gap-5">
-                    <div class="avatar-wrap flex-shrink-0">
-                        <div class="avatar-head">
-                            <div class="avatar-eye left"></div>
-                            <div class="avatar-eye right"></div>
-                            <div id="avatar-mouth" class="avatar-mouth"></div>
+                <div id="barker-box" class="bg-amber-50 p-6 rounded-[2rem] border-4 border-amber-800 shadow-2xl flex items-center gap-5">
+                    <div class="w-20 h-20 relative flex-shrink-0">
+                        <div class="w-16 h-16 bg-stone-900 border-2 border-amber-500 rounded-full absolute bottom-0 left-2">
+                            <div class="w-2 h-2 bg-amber-500 rounded-full absolute top-4 left-4"></div>
+                            <div class="w-2 h-2 bg-amber-500 rounded-full absolute top-4 right-4"></div>
+                            <div id="avatar-mouth" class="w-6 h-1 bg-amber-500 absolute bottom-3 left-5 rounded-full"></div>
                         </div>
                     </div>
-                    <p id="dealer-msg" class="text-stone-900 text-lg font-bold italic leading-snug">
-                        "Welcome to the Royal Circle! The Imperial Orbs await your command. Place your wagers!"
+                    <p id="dealer-msg" class="text-stone-900 text-lg font-bold italic">
+                        "Welcome to the Grand Circle! The Fiesta has begun! Place your wagers!"
                     </p>
                 </div>
 
-                <div class="bg-stone-900/95 backdrop-blur-xl p-6 rounded-[2.5rem] border-2 border-amber-600/40 shadow-inner">
-                    <h3 class="text-center text-amber-500 text-xs font-bold mb-4 uppercase tracking-[0.3em]">Imperial Wager</h3>
+                <div class="glass-pane p-6 rounded-[2rem]">
+                    <h3 class="text-center text-amber-500 text-xs font-bold mb-4 uppercase tracking-[0.3em]">Imperial Wager (🪙)</h3>
                     <div id="bet-amount-selector" class="flex justify-center gap-4">
                         <button data-amount="10" class="bet-chip active w-14 h-14 rounded-full font-royal text-base">10</button>
                         <button data-amount="20" class="bet-chip w-14 h-14 rounded-full font-royal text-base">20</button>
@@ -424,81 +473,106 @@
                     </div>
                 </div>
 
-                <div class="bg-stone-900/95 backdrop-blur-xl p-6 rounded-[2.5rem] border-2 border-amber-600/30 shadow-inner">
-                    <div class="power-meter-container">
-                        <div id="power-fill"></div>
+                <div class="glass-pane p-6 rounded-[2rem]">
+                    <div class="w-full h-4 bg-black rounded-full border border-amber-900 overflow-hidden mb-3">
+                        <div id="power-fill" class="h-full w-0 bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 transition-all duration-75"></div>
                     </div>
                     <button id="draw-btn" disabled 
-                        class="w-full py-6 rounded-2xl text-3xl font-royal bg-gradient-to-b from-amber-200 via-amber-500 to-amber-800 text-stone-900 shadow-[0_8px_0_#451a03] active:translate-y-1 active:shadow-none disabled:opacity-20 disabled:grayscale transition-all duration-75">
+                        class="w-full py-6 rounded-2xl text-3xl font-royal bg-gradient-to-b from-amber-200 via-amber-500 to-amber-800 text-stone-900 shadow-[0_8px_0_#451a03] active:translate-y-1 active:shadow-none disabled:opacity-30 disabled:grayscale">
                         HOLD [SPACE]
                     </button>
                 </div>
 
-                <div id="results-area" class="bg-black/80 backdrop-blur-2xl p-6 rounded-[2.5rem] min-h-[140px] flex justify-center gap-4 border-2 border-amber-600/20 shadow-2xl">
-                    <span class="text-amber-600/20 font-royal text-xl self-center uppercase tracking-widest animate-pulse">Destiny Awaits</span>
+                <div id="results-area" class="glass-pane p-6 rounded-[2rem] min-h-[140px] flex justify-center gap-4">
+                    <span class="text-amber-600/30 font-royal text-xl self-center uppercase tracking-widest animate-pulse">Destiny Awaits</span>
                 </div>
 
                 <div class="flex flex-col gap-3">
-                    <div class="flex gap-4">
-                        <button id="reset-btn" class="flex-1 py-4 rounded-xl bg-stone-800 text-amber-500 font-royal text-sm border-2 border-stone-700 hover:bg-stone-700 transition-all active:scale-95">RESET TABLE</button>
-                        <button id="refill-btn" class="hidden flex-1 py-4 rounded-xl bg-amber-800 text-stone-100 font-royal text-sm border-2 border-amber-900 hover:bg-amber-700 transition-all active:scale-95">REFILL ₱</button>
-                    </div>
-                    <button id="help-btn" class="w-full py-3 rounded-xl bg-teal-900/40 text-teal-400 font-royal text-xs border-2 border-teal-800/60 hover:bg-teal-800 hover:text-white transition-all">HOW TO PLAY</button>
+                    <button id="reset-btn" class="w-full py-4 rounded-xl glass-pane text-amber-500 font-royal text-sm hover:bg-stone-800/50">RESET TABLE</button>
+                    <button id="help-btn" class="w-full py-2 text-teal-400 font-royal text-xs uppercase tracking-widest hover:text-white">How to Play</button>
                 </div>
             </aside>
         </div>
     </div>
 
-    <!-- How to Play Modal -->
-    <div id="help-modal">
-        <div class="modal-content text-stone-100">
-            <h2 class="text-3xl font-royal royal-title text-center mb-6">Imperial Rulebook</h2>
-            <div class="space-y-4 font-serif text-stone-300 leading-relaxed overflow-y-auto max-h-[60vh] pr-2">
-                <section>
-                    <h3 class="text-amber-500 font-bold uppercase text-xs tracking-widest mb-2">1. Select Your Champions</h3>
-                    <p>Choose up to <b>3 cards</b> on the table. These are your chosen outcomes. Click a selected card to unselect it.</p>
-                </section>
-                <section>
-                    <h3 class="text-amber-500 font-bold uppercase text-xs tracking-widest mb-2">2. Set the Stakes</h3>
-                    <p>Pick a wager amount (10, 20, or 50). This amount is charged <b>per card</b> selected.</p>
-                </section>
-                <section>
-                    <h3 class="text-amber-500 font-bold uppercase text-xs tracking-widest mb-2">3. The Triple Launch</h3>
-                    <p>Hold the <b>[SPACE]</b> bar or the <b>LAUNCH</b> button to build energy. Release when ready to drop 3 Imperial Orbs onto the table.</p>
-                </section>
-                <section>
-                    <h3 class="text-amber-500 font-bold uppercase text-xs tracking-widest mb-2">4. Claim Victory</h3>
-                    <p>If any orb lands on your chosen card, you win! The more orbs that land on your card, the higher the bounty!</p>
-                </section>
+    <!-- Modals -->
+    <div id="payment-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[1000] hidden items-center justify-center p-4">
+        <div class="bg-stone-900 border-4 border-amber-800 p-8 rounded-[3rem] max-w-xl w-full shadow-2xl relative">
+            
+            <!-- Step 1: Packs -->
+            <div id="step-1">
+                <h2 class="text-3xl font-royal text-amber-400 text-center mb-6">ROYAL TREASURY</h2>
+                <div class="grid grid-cols-2 gap-4 mb-8">
+                    <div class="vault-pack p-6 rounded-2xl text-center" data-tokens="20" data-price="10">
+                        <div class="text-4xl mb-2">🪙 20</div>
+                        <div class="text-amber-500 font-bold">$10.00</div>
+                    </div>
+                    <div class="vault-pack p-6 rounded-2xl text-center" data-tokens="120" data-price="50">
+                        <div class="text-4xl mb-2">🪙 120</div>
+                        <div class="text-amber-500 font-bold">$50.00</div>
+                    </div>
+                    <div class="vault-pack p-6 rounded-2xl text-center" data-tokens="250" data-price="100">
+                        <div class="text-4xl mb-2">🪙 250</div>
+                        <div class="text-amber-500 font-bold">$100.00</div>
+                    </div>
+                    <div class="vault-pack p-6 rounded-2xl text-center" data-tokens="1500" data-price="500">
+                        <div class="text-4xl mb-2">🪙 1500</div>
+                        <div class="text-amber-500 font-bold">$500.00</div>
+                    </div>
+                </div>
+                <button id="next-to-pay" class="w-full py-4 bg-amber-500 text-stone-900 font-bold rounded-xl opacity-50 cursor-not-allowed" disabled>SELECT PACKAGE</button>
             </div>
-            <button id="close-help-btn" class="w-full mt-8 py-4 bg-gradient-to-r from-amber-600 to-amber-800 text-stone-900 font-royal rounded-xl hover:brightness-110 transition-all">Understood, My Lord</button>
+
+            <!-- Step 2: Method -->
+            <div id="step-2" class="hidden">
+                <h2 class="text-3xl font-royal text-amber-400 text-center mb-6">SELECT METHOD</h2>
+                <div class="space-y-3">
+                    <button class="pay-method-btn w-full p-5 bg-stone-800 rounded-2xl flex justify-between items-center hover:bg-stone-700 transition-colors" data-method="Cash">
+                        <span>Physical Cash Deposit</span><span class="text-2xl">💵</span>
+                    </button>
+                    <button class="pay-method-btn w-full p-5 bg-stone-800 rounded-2xl flex justify-between items-center hover:bg-stone-700 transition-colors" data-method="LINE Pay">
+                        <span>LINE Pay Digital</span><span class="text-2xl">📱</span>
+                    </button>
+                    <button class="pay-method-btn w-full p-5 bg-stone-800 rounded-2xl flex justify-between items-center hover:bg-stone-700 transition-colors" data-method="Debit Card">
+                        <span>Debit Card Swipe</span><span class="text-2xl">💳</span>
+                    </button>
+                    <button class="pay-method-btn w-full p-5 bg-stone-800 rounded-2xl flex justify-between items-center hover:bg-stone-700 transition-colors" data-method="Credit Card">
+                        <span>Credit Card Charge</span><span class="text-2xl">🏦</span>
+                    </button>
+                </div>
+                <button id="back-to-packs" class="w-full mt-4 text-stone-500 text-xs text-center uppercase tracking-widest block">← Change Package</button>
+            </div>
+
+            <!-- QR Section -->
+            <div id="qr-section" class="hidden text-center py-6">
+                <h2 id="qr-title" class="text-2xl font-royal text-amber-400 mb-6 uppercase">SCAN TO PAY</h2>
+                <div class="relative w-48 h-48 mx-auto bg-white p-4 rounded-3xl mb-8 shadow-[0_0_30px_rgba(255,255,255,0.2)]">
+                    <svg viewBox="0 0 100 100" class="w-full h-full text-black">
+                        <rect x="10" y="10" width="30" height="30" fill="currentColor"/>
+                        <rect x="60" y="10" width="30" height="30" fill="currentColor"/>
+                        <rect x="10" y="60" width="30" height="30" fill="currentColor"/>
+                        <rect x="45" y="45" width="20" height="20" fill="currentColor"/>
+                    </svg>
+                    <div class="qr-scanner-line"></div>
+                </div>
+                <button id="simulate-scan-btn" class="w-full py-5 bg-green-600 text-white font-bold rounded-2xl animate-pulse hover:bg-green-500 transition-colors">SIMULATE SUCCESSFUL SCAN</button>
+            </div>
+
+            <button id="close-modal-btn" class="absolute -top-4 -right-4 w-10 h-10 bg-amber-800 text-white font-bold rounded-full shadow-xl border-2 border-amber-400">×</button>
         </div>
     </div>
 
-    <!-- Refill Selection Modal -->
-    <div id="payment-modal">
-        <div class="modal-content">
-            <h2 class="text-3xl font-royal royal-title text-center mb-6">REFILL TREASURY</h2>
-            <p class="text-stone-400 text-center mb-8 text-sm italic">"Select your tribute to continue the royal games!"</p>
-            <div class="space-y-3">
-                <button class="payment-option" data-method="Cash">
-                    <span>Pay Cash</span>
-                    <span class="text-green-500">💵</span>
-                </button>
-                <button class="payment-option" data-method="Line PAY">
-                    <span>Line PAY</span>
-                    <span class="text-green-400">🟢</span>
-                </button>
-                <button class="payment-option" data-method="Debit Card">
-                    <span>Debit Card</span>
-                    <span class="text-blue-400">💳</span>
-                </button>
-                <button class="payment-option" data-method="Credit Card">
-                    <span>Credit Card</span>
-                    <span class="text-amber-400">✨</span>
-                </button>
-            </div>
-            <button id="close-modal-btn" class="w-full mt-6 py-2 text-stone-500 text-xs uppercase tracking-widest hover:text-stone-200 transition-colors font-bold">Cancel</button>
+    <div id="help-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[1000] hidden items-center justify-center p-4">
+        <div class="bg-stone-900 border-4 border-amber-800 p-8 rounded-[3rem] max-w-2xl w-full shadow-2xl text-stone-200">
+            <h2 class="text-3xl font-royal text-amber-400 text-center mb-6">Imperial Rulebook</h2>
+            <ul class="space-y-4 text-sm leading-relaxed">
+                <li><b class="text-amber-500">1. Selection:</b> Click up to 3 cards on the table. Each card is an independent bet.</li>
+                <li><b class="text-amber-500">2. Wager:</b> Select your bet amount per card in Tokens (10, 20, or 50).</li>
+                <li><b class="text-amber-500">3. Drop:</b> Hold [SPACE] or the LAUNCH button to build energy. Release to drop 3 Imperial Orbs.</li>
+                <li><b class="text-amber-500">4. Bounty:</b> Win if an orb lands on your card! Multiple hits multiply the prize!</li>
+                <li><b class="text-amber-500">5. Treasury:</b> Use the gold [+] button to convert Imperial Dollars ($) into Tokens (🪙).</li>
+            </ul>
+            <button id="close-help-btn" class="w-full mt-8 py-4 bg-amber-600 rounded-2xl text-stone-900 font-bold">CLOSE</button>
         </div>
     </div>
 
