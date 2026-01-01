@@ -12,49 +12,60 @@
             --fiesta-yellow: #fbbf24;
             --fiesta-blue: #3b82f6;
             --fiesta-green: #22c55e;
-            --fiesta-pink: #ec4899;
-            --card-bg: #e5dcc3;
-            --card-border-outer: #451a03;
-            --card-border-inner: #fbbf24;
+            --fiesta-pink: #ec4889;
+            --gold-primary: #d97706;
+            --gold-bright: #fbbf24;
+            --gold-shimmer: #fef3c7;
+            --parchment-base: #fdfcf0;
+            /* Fine Linen Texture */
+            --linen-texture: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E");
         }
 
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0f172a;
+            background-color: #450a0a;
             color: #f8fafc;
             margin: 0;
-            overflow-x: hidden;
-            background: linear-gradient(to bottom, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%);
+            overflow: hidden;
             min-height: 100vh;
             position: relative;
+            cursor: none;
         }
 
-        /* --- Live Background Elements --- */
-        
+        /* --- Festive Background --- */
         .live-bg-container {
             position: fixed;
             inset: 0;
-            z-index: 0;
-            pointer-events: none;
+            z-index: -1;
+            background: radial-gradient(circle at 50% 50%, #7c2d12 0%, #450a0a 100%);
             overflow: hidden;
         }
 
-        .rays {
+        .rays-container {
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 300vw;
-            height: 300vw;
+            width: 200vmax;
+            height: 200vmax;
             transform: translate(-50%, -50%);
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0.15;
+            animation: rotate-rays 60s linear infinite;
+        }
+
+        .rays {
+            width: 100%;
+            height: 100%;
             background: conic-gradient(
                 from 0deg,
                 transparent 0deg,
-                rgba(251, 191, 36, 0.03) 10deg,
-                transparent 20deg,
-                rgba(236, 72, 153, 0.03) 30deg,
-                transparent 40deg
+                transparent 10deg,
+                rgba(251, 191, 36, 0.4) 10deg,
+                rgba(251, 191, 36, 0.4) 20deg,
+                transparent 20deg
             );
-            animation: rotate-rays 100s linear infinite;
+            background-size: 40deg 40deg;
         }
 
         @keyframes rotate-rays {
@@ -62,325 +73,194 @@
             to { transform: translate(-50%, -50%) rotate(360deg); }
         }
 
-        .confetti {
+        .bg-overlay {
             position: absolute;
-            width: 8px;
-            height: 8px;
-            background: var(--color);
-            opacity: 0.6;
-            border-radius: 2px;
-            animation: confetti-fall var(--duration) linear infinite;
+            inset: 0;
+            background: radial-gradient(circle at 50% 50%, transparent 0%, rgba(0,0,0,0.4) 100%);
+            z-index: 2;
         }
 
-        @keyframes confetti-fall {
-            0% { transform: translateY(-10vh) translateX(0) rotate(0deg); opacity: 0; }
-            10% { opacity: 0.6; }
-            90% { opacity: 0.6; }
-            100% { transform: translateY(110vh) translateX(100px) rotate(720deg); opacity: 0; }
+        /* --- Custom Cursor --- */
+        #custom-cursor {
+            position: fixed; width: 40px; height: 40px; pointer-events: none; z-index: 10000;
+            transform: translate(-50%, -50%); transition: transform 0.15s cubic-bezier(0.23, 1, 0.32, 1);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .cursor-inner { width: 8px; height: 8px; background: #fff; border-radius: 50%; box-shadow: 0 0 10px #fbbf24, 0 0 20px #fbbf24; z-index: 2; }
+        .cursor-outer { position: absolute; width: 100%; height: 100%; border: 2px solid rgba(251, 191, 36, 0.4); border-radius: 12px; transform: rotate(45deg); animation: cursor-rotate 6s linear infinite; }
+        @keyframes cursor-rotate { from { transform: rotate(45deg); } to { transform: rotate(405deg); } }
+        #custom-cursor.hovering .cursor-outer { transform: rotate(45deg) scale(1.4); border-color: #fff; }
+
+        /* --- UI Elements --- */
+        .glass-pane {
+            background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(28px); border: 1px solid rgba(251, 191, 36, 0.25);
+            box-shadow: 0 25px 60px rgba(0,0,0,0.8);
         }
 
-        .crowd-container {
-            position: absolute;
-            bottom: -20px;
-            left: 0;
-            width: 100%;
-            height: 150px;
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-around;
-            opacity: 0.3;
-            filter: blur(2px);
+        .parchment-pane {
+            background-color: var(--parchment-base);
+            background-image: var(--linen-texture);
+            border: 8px solid #2d0a01;
+            box-shadow: 0 30px 90px rgba(0,0,0,0.9), inset 0 0 40px rgba(0,0,0,0.1);
+            color: #1e1b4b;
         }
-
-        .person-silhouette {
-            width: 40px;
-            height: 80px;
-            background: #000;
-            border-radius: 20px 20px 0 0;
-            position: relative;
-            animation: crowd-sway var(--speed) ease-in-out infinite alternate;
-        }
-        .person-silhouette::before {
-            content: '';
-            position: absolute;
-            top: -25px;
-            left: 5px;
-            width: 30px;
-            height: 30px;
-            background: #000;
-            border-radius: 50%;
-        }
-
-        @keyframes crowd-sway {
-            from { transform: translateY(5px) rotate(-2deg); }
-            to { transform: translateY(0px) rotate(2deg); }
-        }
-
-        /* --- New Card Name Banner --- */
-        #active-card-banner {
-            min-height: 4rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Bungee', cursive;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            opacity: 0;
-            transform: translateY(10px);
-        }
-        #active-card-banner.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        .neon-text-red {
-            color: #ef4444;
-            text-shadow: 0 0 10px rgba(239, 68, 68, 0.8), 0 0 20px rgba(239, 68, 68, 0.4);
-            animation: flicker 2s infinite;
-        }
-        .neon-text-white {
-            color: #f8fafc;
-            text-shadow: 0 0 10px rgba(248, 250, 252, 0.8), 0 0 20px rgba(248, 250, 252, 0.4);
-            animation: flicker 3s infinite;
-        }
-
-        @keyframes flicker {
-            0%, 18%, 22%, 25%, 53%, 57%, 100% { opacity: 1; }
-            20%, 24%, 55% { opacity: 0.8; }
-        }
-
-        /* --- Game UI Styles --- */
-
-        .font-perya { font-family: 'Bungee', cursive; }
-        .font-card { font-family: 'Playfair Display', serif; }
-        .font-royal { font-family: 'Cinzel Decorative', cursive; }
 
         .royal-title {
-            background: linear-gradient(to bottom, #fffbeb 10%, #fbbf24 40%, #d97706 70%, #78350f 95%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.8));
-            animation: title-shimmer 4s infinite linear;
-            background-size: 200% auto;
+            font-family: 'Cinzel Decorative', cursive;
+            background: linear-gradient(to bottom, #fffbeb, #fbbf24, #d97706, #78350f);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.6));
         }
-
-        @keyframes title-shimmer { to { background-position: 200% center; } }
 
         #table-surface {
-            background: radial-gradient(circle at 50% 50%, #059669 0%, #064e3b 100%); 
-            padding: 2.5rem;
-            border-radius: 4rem;
-            border: 20px solid #2d0a01;
-            box-shadow: 
-                0 60px 100px rgba(0,0,0,0.9), 
-                inset 0 0 100px rgba(0,0,0,0.6),
-                0 0 0 6px #fbbf24,
-                0 0 40px rgba(251, 191, 36, 0.3);
-            transform: rotateX(20deg);
-            transform-style: preserve-3d;
-            transition: transform 0.5s ease;
+            background: radial-gradient(circle at center, #065f46 0%, #064e3b 100%);
+            border: 24px solid #2d0a01; border-radius: 5rem;
+            transform: rotateX(24deg); transform-style: preserve-3d;
+            box-shadow: 0 80px 160px rgba(0,0,0,1), inset 0 0 150px rgba(0,0,0,0.6);
+            position: relative;
         }
 
+        /* --- Ornate Cards --- */
         .perya-card {
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            background-color: var(--card-bg);
-            background-image: 
-                linear-gradient(135deg, rgba(0,0,0,0.05) 0%, transparent 100%),
-                url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23000' fill-opacity='0.03' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E");
-            border-radius: 0.8rem;
-            border: 3px solid var(--card-border-outer);
-            box-shadow: 
-                0 10px 20px rgba(0,0,0,0.5),
-                inset 0 0 0 2px rgba(251, 191, 36, 0.4);
-            cursor: pointer;
+            background-color: var(--parchment-base);
+            background-image: var(--linen-texture), linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0.05) 100%);
+            border-radius: 12px;
+            /* Intricate Border */
+            border: 4px solid #d97706;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4), inset 0 0 15px rgba(0,0,0,0.1), 0 0 0 2px #fbbf24;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
             transform-style: preserve-3d;
             position: relative;
-            overflow: visible; 
+            z-index: 10;
         }
 
-        /* Tooltip Styling */
-        .card-tooltip {
-            position: absolute;
-            top: -45px;
-            left: 50%;
-            transform: translateX(-50%) translateY(10px);
-            background: rgba(0,0,0,0.9);
-            color: #fbbf24;
-            padding: 4px 12px;
-            border-radius: 8px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: all 0.2s ease;
-            border: 1px solid #fbbf24;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-            z-index: 50;
-        }
-        .perya-card:hover .card-tooltip {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        .perya-card::after {
+        /* Embossed Gilded Corners */
+        .perya-card::before {
             content: '';
             position: absolute;
-            top: 4px;
-            left: 4px;
-            right: 4px;
-            bottom: 4px;
-            border: 1px solid var(--card-border-inner);
-            border-radius: 0.5rem;
+            inset: -6px;
+            border: 2px solid transparent;
+            border-image: linear-gradient(45deg, #fbbf24, #d97706, #fbbf24) 1;
             pointer-events: none;
-            opacity: 0.6;
-            transition: opacity 0.3s ease;
+            opacity: 0.5;
         }
 
-        .perya-card:hover::after { opacity: 1; }
-
-        .card-corner {
-            position: absolute;
-            width: 12px;
-            height: 12px;
-            border: 2px solid var(--card-border-inner);
-            z-index: 5;
-            pointer-events: none;
+        @keyframes card-selection-pop {
+            0% { transform: scale(1) translateY(0); }
+            40% { transform: scale(0.92) translateY(5px); }
+            100% { transform: scale(1.15) translateY(-20px) translateZ(80px); }
         }
-        .corner-tl { top: 6px; left: 6px; border-right: 0; border-bottom: 0; }
-        .corner-tr { top: 6px; right: 6px; border-left: 0; border-bottom: 0; }
-        .corner-bl { bottom: 6px; left: 6px; border-right: 0; border-top: 0; }
-        .corner-br { bottom: 6px; right: 6px; border-left: 0; border-top: 0; }
+
+        @keyframes celestial-glow-pulse {
+            0%, 100% { box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 20px rgba(251, 191, 36, 0.3); }
+            50% { box-shadow: 0 30px 60px rgba(0,0,0,0.7), 0 0 50px rgba(251, 191, 36, 0.8); }
+        }
+
+        @keyframes hover-gold-pulse {
+            0%, 100% { box-shadow: 0 15px 35px rgba(0,0,0,0.4), 0 0 5px rgba(251, 191, 36, 0.2); }
+            50% { box-shadow: 0 15px 35px rgba(0,0,0,0.4), 0 0 25px rgba(251, 191, 36, 0.6); }
+        }
 
         .perya-card.selected {
+            background-color: #fff;
+            z-index: 100;
             border-color: #fbbf24;
-            animation: float-lively 3.0s ease-in-out infinite;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.7), 0 0 30px rgba(251, 191, 36, 0.6);
-            z-index: 10;
-            background-color: #f3ecd9;
+            animation: card-selection-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, 
+                       celestial-glow-pulse 2s infinite ease-in-out;
         }
 
-        @keyframes float-lively {
-            0% { transform: translateZ(35px) translateY(0px) rotateX(2deg); }
-            50% { transform: translateZ(45px) translateY(-8px) rotateX(-2deg); }
-            100% { transform: translateZ(35px) translateY(0px) rotateX(2deg); }
+        /* Hover effect for non-selected cards */
+        .perya-card:not(.selected):hover {
+            transform: translateY(-8px) scale(1.05);
+            border-color: rgba(251, 191, 36, 1);
+            animation: hover-gold-pulse 1.5s infinite ease-in-out;
+            z-index: 50;
         }
+
+        .filigree { position: absolute; width: 42px; height: 42px; color: #d97706; pointer-events: none; opacity: 0.8; transition: 0.3s; }
+        .perya-card.selected .filigree, .perya-card:not(.selected):hover .filigree { opacity: 1; filter: drop-shadow(0 0 5px #fbbf24); color: #fbbf24; }
+        
+        .filigree-tl { top: 2px; left: 2px; }
+        .filigree-tr { top: 2px; right: 2px; transform: rotate(90deg); }
+        .filigree-bl { bottom: 2px; left: 2px; transform: rotate(-90deg); }
+        .filigree-br { bottom: 2px; right: 2px; transform: rotate(180deg); }
 
         .bet-badge {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-10deg);
-            background: #ef4444;
-            color: #fff;
-            padding: 4px 12px;
-            border-radius: 9999px;
-            font-family: 'Bungee', cursive;
-            font-size: 0.6rem;
-            border: 2px solid #fff;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
-            opacity: 0;
-            transition: all 0.3s ease;
-            pointer-events: none;
-            z-index: 20;
+            position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%);
+            background: var(--fiesta-red); color: white; padding: 2px 10px; border-radius: 20px; font-size: 0.65rem; font-weight: 900;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.3); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-
-        .selected .bet-badge { opacity: 1; transform: translate(-50%, -50%) rotate(-8deg) scale(1.1); }
-
-        .perya-card.winner { animation: winner-glow-intense 0.6s infinite alternate; z-index: 100; }
-        @keyframes winner-glow-intense {
-            from { transform: translateZ(50px) scale(1.1); box-shadow: 0 0 50px #fbbf24; }
-            to { transform: translateZ(70px) scale(1.2); box-shadow: 0 0 100px #fbbf24; }
-        }
-
-        .perya-card.loser {
-            filter: grayscale(0.8) opacity(0.5);
-            transform: translateZ(-10px);
-            border-color: #44403c;
-        }
+        .perya-card.selected .bet-badge { opacity: 1; bottom: 8px; transform: translateX(-50%) scale(1.1); }
 
         .selection-ball {
+            position: absolute; width: 36px; height: 36px;
+            background: radial-gradient(circle at 30% 30%, #fff 0%, #fbbf24 60%, #92400e 100%);
+            border-radius: 50%; z-index: 1000; display: none; pointer-events: none;
+        }
+
+        .ball-layer {
             position: absolute;
-            width: 36px;
-            height: 36px;
-            background: radial-gradient(circle at 35% 35%, #fff 0%, #fbbf24 40%, #b45309 80%, #451a03 100%);
-            border-radius: 50%;
-            box-shadow: 0 30px 50px rgba(0,0,0,0.8);
-            z-index: 200;
-            display: none;
+            inset: 0;
             pointer-events: none;
+            z-index: 200;
+            transform-style: preserve-3d;
         }
 
-        .glass-pane {
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(12px);
-            border: 2px solid rgba(251, 191, 36, 0.3);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.5), 0 0 15px rgba(251, 191, 36, 0.1);
+        .ball-shadow {
+            position: absolute; width: 36px; height: 36px;
+            background: rgba(0,0,0,0.4);
+            border-radius: 50%; display: none;
+            filter: blur(4px);
         }
 
-        .bunting {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 50px;
-            display: flex; justify-content: space-around; z-index: 20; pointer-events: none;
-        }
-        .flag {
-            width: 0; height: 0;
-            border-left: 20px solid transparent;
-            border-right: 20px solid transparent;
-            border-top: 35px solid var(--color);
-            animation: sway 4s ease-in-out infinite alternate;
-        }
-        @keyframes sway { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
-
-        .fullscreen-btn {
-            position: absolute; top: 1rem; right: 1rem; z-index: 100;
-            background: rgba(0,0,0,0.6); border: 1px solid #fbbf24; color: #fbbf24;
-            padding: 0.6rem; border-radius: 0.5rem; cursor: pointer;
+        /* --- Sparkles/Particles --- */
+        .celestial-sparkle {
+            position: fixed; pointer-events: none; z-index: 9999;
+            width: 12px; height: 12px;
+            background: #fbbf24;
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            box-shadow: 0 0 10px #fbbf24;
         }
 
-        #game-container { position: relative; z-index: 30; }
-
-        #power-fill {
-            box-shadow: 0 0 20px rgba(251, 191, 36, 0.8);
+        .confetti {
+            position: absolute; width: 10px; height: 10px; background: var(--color); border-radius: 2px;
+            animation: fall var(--duration) linear infinite;
+            z-index: 5;
+        }
+        @keyframes fall {
+            0% { transform: translateY(-10vh) rotate(0); opacity: 0; }
+            10% { opacity: 1; }
+            100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
         }
 
-        #barker-box {
-            animation: barker-float 5s ease-in-out infinite alternate;
-        }
-        @keyframes barker-float {
-            from { transform: translateY(0); }
-            to { transform: translateY(-8px); }
+        .shop-tab-btn.active {
+            background-color: #78350f;
+            color: #fbbf24;
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
         }
 
-        /* Treasury Button */
-        #refill-btn {
-            background: linear-gradient(to bottom, #fde68a, #fbbf24, #b45309);
-            border: 1px solid #451a03;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.4);
-            transition: all 0.2s ease;
+        .item-card {
+            background: white;
+            border: 2px solid rgba(120, 53, 15, 0.1);
+            transition: all 0.3s ease;
         }
-        #refill-btn:hover {
-            transform: scale(1.1);
-            filter: brightness(1.2);
-            box-shadow: 0 0 15px rgba(251, 191, 36, 0.6);
+        .item-card:hover {
+            transform: translateY(-5px);
+            border-color: #fbbf24;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
         }
 
-        /* Treasury Modal Specifics */
-        .vault-pack {
-            background: #1e293b;
-            border: 2px solid #334155;
-            transition: all 0.2s ease;
-            cursor: pointer;
+        /* --- Treasury Badges --- */
+        .vault-pack { position: relative; }
+        .badge {
+            position: absolute; top: -12px; right: -12px;
+            padding: 4px 12px; border-radius: 12px; font-size: 0.7rem; font-weight: 900;
+            text-transform: uppercase; z-index: 10; transform: rotate(5deg);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
-        .vault-pack:hover { border-color: #fbbf24; background: #0f172a; transform: translateY(-4px); }
-        .vault-pack.active { border-color: #fbbf24; background: #0f172a; box-shadow: 0 0 15px rgba(251, 191, 36, 0.4); }
-
-        .qr-scanner-line {
-            width: 100%; height: 2px; background: #fbbf24; position: absolute;
-            animation: scan 2s ease-in-out infinite; box-shadow: 0 0 10px #fbbf24;
-        }
-        @keyframes scan { 0%, 100% { top: 0; } 50% { top: 100%; } }
-
+        .badge-popular { background: #3b82f6; color: white; }
+        .badge-premium { background: #d97706; color: white; animation: pulse-gold 2s infinite; }
+        @keyframes pulse-gold { 0%, 100% { box-shadow: 0 0 5px #fbbf24; } 50% { box-shadow: 0 0 20px #fbbf24; } }
     </style>
 <script type="importmap">
 {
@@ -391,188 +271,261 @@
 </script>
 </head>
 <body class="p-4 md:p-8">
+    <div id="custom-cursor"><div class="cursor-outer"></div><div class="cursor-inner"></div></div>
 
-    <div class="live-bg-container" id="live-bg">
-        <div class="rays"></div>
-        <div class="crowd-container" id="crowd"></div>
+    <div class="live-bg-container">
+        <div class="rays-container"><div class="rays"></div></div>
+        <div class="bg-overlay"></div>
+        <div id="confetti-holder"></div>
     </div>
 
-    <div class="bunting">
-        <div class="flag" style="--color: #ef4444"></div>
-        <div class="flag" style="--color: #fbbf24"></div>
-        <div class="flag" style="--color: #3b82f6"></div>
-        <div class="flag" style="--color: #22c55e"></div>
-        <div class="flag" style="--color: #ec4899"></div>
-        <div class="flag" style="--color: #ef4444"></div>
-        <div class="flag" style="--color: #fbbf24"></div>
-        <div class="flag" style="--color: #3b82f6"></div>
-        <div class="flag" style="--color: #22c55e"></div>
-        <div class="flag" style="--color: #ec4899"></div>
-    </div>
+    <div id="game-container" class="max-w-7xl w-full mx-auto relative z-10">
+        <button id="fullscreen-toggle" class="absolute top-1.5 right-1.5 z-[100] bg-black/60 text-amber-400 border border-amber-500/40 px-3 py-2 rounded-xl text-xs backdrop-blur-md">⛶ FULL SCREEN</button>
 
-    <div id="game-container" class="max-w-7xl w-full mx-auto">
-        <button id="fullscreen-toggle" class="fullscreen-btn" title="Toggle Fullscreen">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
-        </button>
+        <header class="text-center mb-10">
+            <h1 class="text-6xl md:text-8xl royal-title tracking-tighter mb-4">PERYA ROYALE</h1>
+            <div id="active-card-banner" class="text-2xl md:text-4xl text-amber-400 h-16 flex items-center justify-center font-bold tracking-widest uppercase">CHOOSE YOUR FATE</div>
 
-        <header class="text-center mb-8">
-            <h1 class="text-6xl md:text-8xl royal-title font-royal tracking-tighter mb-4">PERYA ROYALE</h1>
-            
-            <!-- Dynamic Card Name Banner -->
-            <div id="active-card-banner" class="text-3xl md:text-5xl">
-                PICK YOUR DESTINY
-            </div>
-
-            <div class="flex justify-center gap-8 mt-6">
-                <div class="glass-pane px-8 py-3 rounded-2xl flex items-center relative group">
-                    <span class="text-amber-500 mr-3 text-2xl font-bold">🪙</span>
-                    <span id="balance-txt" class="text-stone-100 text-3xl font-royal">0</span>
-                    
-                    <button id="refill-btn" class="ml-4 w-8 h-8 rounded-full flex items-center justify-center text-stone-900 font-bold shadow-lg" title="Royal Treasury">
-                        +
-                    </button>
+            <div class="flex justify-center flex-wrap gap-6 mt-10">
+                <div class="glass-pane px-10 py-4 rounded-3xl flex items-center shadow-2xl">
+                    <span class="text-amber-500 mr-4 text-4xl">🪙</span>
+                    <span id="balance-txt" class="text-stone-100 text-4xl font-bold">0</span>
+                    <button id="refill-btn" class="ml-6 w-10 h-10 rounded-full bg-amber-500 text-stone-900 font-bold flex items-center justify-center hover:scale-110 transition-transform shadow-lg">+</button>
                 </div>
-                <div class="glass-pane px-8 py-3 rounded-2xl flex items-center">
-                    <span class="text-amber-400 mr-3 text-2xl font-bold">🃏</span>
-                    <span id="bet-count-txt" class="text-stone-100 text-3xl font-royal">0 / 3</span>
+                <div class="glass-pane px-10 py-4 rounded-3xl flex items-center shadow-2xl">
+                    <span class="text-amber-400 mr-4 text-4xl">🃏</span>
+                    <span id="bet-count-txt" class="text-stone-100 text-4xl font-bold">0 / 3</span>
+                </div>
+                <div class="flex gap-4">
+                    <button id="rules-toggle-btn" class="glass-pane px-6 py-4 rounded-3xl flex items-center shadow-2xl border-amber-500/30 hover:bg-amber-500/10 transition-colors">
+                        <span class="text-amber-400 mr-3 text-2xl">📜</span>
+                        <span class="text-stone-100 text-sm font-bold uppercase tracking-widest">Rules</span>
+                    </button>
+                    <button id="shop-toggle-btn" class="glass-pane px-6 py-4 rounded-3xl flex items-center shadow-2xl border-emerald-500/30 hover:bg-emerald-500/10 transition-colors">
+                        <span class="text-emerald-400 mr-3 text-2xl">🎁</span>
+                        <span class="text-stone-100 text-sm font-bold uppercase tracking-widest">Shop</span>
+                    </button>
                 </div>
             </div>
         </header>
 
-        <div class="grid lg:grid-cols-[1fr,400px] gap-10 items-start">
+        <main class="grid lg:grid-cols-[1fr,440px] gap-14 items-start">
             <section id="table-container">
-                <div id="table-surface">
-                    <div id="card-grid" class="grid grid-cols-4 gap-4 transform-style-3d">
-                        <div id="ball-0" class="selection-ball"></div>
-                        <div id="ball-1" class="selection-ball"></div>
-                        <div id="ball-2" class="selection-ball"></div>
-                    </div>
+                <div id="table-surface" class="p-16">
+                    <div id="card-grid" class="grid grid-cols-4 gap-10"></div>
+                    <div id="ball-layer" class="ball-layer"></div>
                 </div>
             </section>
-
-            <aside class="flex flex-col gap-6">
-                <div id="barker-box" class="bg-amber-50 p-6 rounded-[2rem] border-4 border-amber-800 shadow-2xl flex items-center gap-5">
-                    <div class="w-20 h-20 relative flex-shrink-0">
-                        <div class="w-16 h-16 bg-stone-900 border-2 border-amber-500 rounded-full absolute bottom-0 left-2">
-                            <div class="w-2 h-2 bg-amber-500 rounded-full absolute top-4 left-4"></div>
-                            <div class="w-2 h-2 bg-amber-500 rounded-full absolute top-4 right-4"></div>
-                            <div id="avatar-mouth" class="w-6 h-1 bg-amber-500 absolute bottom-3 left-5 rounded-full"></div>
+            
+            <aside class="flex flex-col gap-10">
+                <div class="glass-pane p-10 rounded-[3rem] shadow-2xl flex items-center gap-8 border-amber-500/40 min-h-[160px]">
+                    <div class="dealer-avatar" id="dealer-avatar">
+                        <div class="dealer-body" id="dealer-character">
+                            <div class="dealer-hat"></div>
+                            <div class="dealer-face">
+                                <div class="dealer-eyes-row"><div class="dealer-eye"></div><div class="dealer-eye"></div></div>
+                                <div class="dealer-mouth"></div>
+                            </div>
                         </div>
                     </div>
-                    <p id="dealer-msg" class="text-stone-900 text-lg font-bold italic">
-                        "Welcome to the Grand Circle! The Fiesta has begun! Place your wagers!"
-                    </p>
+                    <p id="dealer-msg" class="text-amber-50 text-xl font-bold italic leading-tight flex-1">"Step right up! The Imperial Table is open!"</p>
                 </div>
 
-                <div class="glass-pane p-6 rounded-[2rem]">
-                    <h3 class="text-center text-amber-500 text-xs font-bold mb-4 uppercase tracking-[0.3em]">Imperial Wager (🪙)</h3>
-                    <div id="bet-amount-selector" class="flex justify-center gap-4">
-                        <button data-amount="10" class="bet-chip active w-14 h-14 rounded-full font-royal text-base">10</button>
-                        <button data-amount="20" class="bet-chip w-14 h-14 rounded-full font-royal text-base">20</button>
-                        <button data-amount="50" class="bet-chip w-14 h-14 rounded-full font-royal text-base">50</button>
+                <div class="glass-pane p-10 rounded-[3rem]">
+                    <h3 class="text-center text-amber-500 text-sm font-bold mb-8 uppercase tracking-[0.4em]">Wager per Card (🪙)</h3>
+                    <div id="bet-amount-selector" class="flex justify-center gap-6">
+                        <button data-amount="10" class="w-20 h-20 rounded-full bg-amber-500 text-stone-900 font-bold active shadow-lg">10</button>
+                        <button data-amount="20" class="w-20 h-20 rounded-full bg-stone-800 text-amber-500 border-2 border-amber-500 font-bold hover:bg-stone-700 transition-colors">20</button>
+                        <button data-amount="50" class="w-20 h-20 rounded-full bg-stone-800 text-amber-500 border-2 border-amber-500 font-bold hover:bg-stone-700 transition-colors">50</button>
                     </div>
                 </div>
 
-                <div class="glass-pane p-6 rounded-[2rem]">
-                    <div class="w-full h-4 bg-black rounded-full border border-amber-900 overflow-hidden mb-3">
-                        <div id="power-fill" class="h-full w-0 bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 transition-all duration-75"></div>
+                <div class="glass-pane p-10 rounded-[3rem]">
+                    <div class="w-full h-5 bg-black/60 rounded-full overflow-hidden mb-8 border border-white/10 shadow-inner">
+                        <div id="power-fill" class="h-full w-0 bg-gradient-to-r from-green-500 via-yellow-400 to-red-500 transition-all duration-75"></div>
                     </div>
-                    <button id="draw-btn" disabled 
-                        class="w-full py-6 rounded-2xl text-3xl font-royal bg-gradient-to-b from-amber-200 via-amber-500 to-amber-800 text-stone-900 shadow-[0_8px_0_#451a03] active:translate-y-1 active:shadow-none disabled:opacity-30 disabled:grayscale">
-                        HOLD [SPACE]
-                    </button>
+                    <button id="draw-btn" disabled class="w-full py-8 rounded-3xl text-5xl font-bold text-stone-900 bg-amber-500 uppercase tracking-widest disabled:opacity-30 shadow-xl">HOLD [SPACE]</button>
                 </div>
 
-                <div id="results-area" class="glass-pane p-6 rounded-[2rem] min-h-[140px] flex justify-center gap-4">
-                    <span class="text-amber-600/30 font-royal text-xl self-center uppercase tracking-widest animate-pulse">Destiny Awaits</span>
-                </div>
-
-                <div class="flex flex-col gap-3">
-                    <button id="reset-btn" class="w-full py-4 rounded-xl glass-pane text-amber-500 font-royal text-sm hover:bg-stone-800/50">RESET TABLE</button>
-                    <button id="help-btn" class="w-full py-2 text-teal-400 font-royal text-xs uppercase tracking-widest hover:text-white">How to Play</button>
+                <div id="results-area" class="glass-pane p-10 rounded-[3rem] min-h-[180px] flex justify-center items-center gap-8">
+                    <span class="text-amber-600/30 font-bold tracking-widest uppercase text-xl italic">Awaiting Fortune</span>
                 </div>
             </aside>
-        </div>
+        </main>
     </div>
 
-    <!-- Modals -->
-    <div id="payment-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[1000] hidden items-center justify-center p-4">
-        <div class="bg-stone-900 border-4 border-amber-800 p-8 rounded-[3rem] max-w-xl w-full shadow-2xl relative">
+    <!-- Rewards Shop Modal -->
+    <div id="shop-modal" class="fixed inset-0 bg-black/98 backdrop-blur-3xl z-[1002] hidden items-center justify-center p-4">
+        <div class="parchment-pane p-8 md:p-12 rounded-[2rem] md:rounded-[4rem] max-w-5xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <h2 class="text-4xl md:text-5xl font-royal text-amber-800 text-center mb-6 uppercase tracking-tighter">Royal Emporium</h2>
             
-            <!-- Step 1: Packs -->
-            <div id="step-1">
-                <h2 class="text-3xl font-royal text-amber-400 text-center mb-6">ROYAL TREASURY</h2>
-                <div class="grid grid-cols-2 gap-4 mb-8">
-                    <div class="vault-pack p-6 rounded-2xl text-center" data-tokens="20" data-price="10">
-                        <div class="text-4xl mb-2">🪙 20</div>
-                        <div class="text-amber-500 font-bold">$10.00</div>
-                    </div>
-                    <div class="vault-pack p-6 rounded-2xl text-center" data-tokens="120" data-price="50">
-                        <div class="text-4xl mb-2">🪙 120</div>
-                        <div class="text-amber-500 font-bold">$50.00</div>
-                    </div>
-                    <div class="vault-pack p-6 rounded-2xl text-center" data-tokens="250" data-price="100">
-                        <div class="text-4xl mb-2">🪙 250</div>
-                        <div class="text-amber-500 font-bold">$100.00</div>
-                    </div>
-                    <div class="vault-pack p-6 rounded-2xl text-center" data-tokens="1500" data-price="500">
-                        <div class="text-4xl mb-2">🪙 1500</div>
-                        <div class="text-amber-500 font-bold">$500.00</div>
-                    </div>
-                </div>
-                <button id="next-to-pay" class="w-full py-4 bg-amber-500 text-stone-900 font-bold rounded-xl opacity-50 cursor-not-allowed" disabled>SELECT PACKAGE</button>
+            <div class="flex justify-center gap-4 mb-8">
+                <button id="tab-foods" class="shop-tab-btn active px-10 py-3 rounded-full font-black uppercase tracking-widest border-2 border-amber-900/20 text-amber-900 hover:bg-amber-800/10 transition-all">Delicacies</button>
+                <button id="tab-things" class="shop-tab-btn px-10 py-3 rounded-full font-black uppercase tracking-widest border-2 border-amber-900/20 text-amber-900 hover:bg-amber-800/10 transition-all">Imperial Goods</button>
             </div>
 
-            <!-- Step 2: Method -->
-            <div id="step-2" class="hidden">
-                <h2 class="text-3xl font-royal text-amber-400 text-center mb-6">SELECT METHOD</h2>
-                <div class="space-y-3">
-                    <button class="pay-method-btn w-full p-5 bg-stone-800 rounded-2xl flex justify-between items-center hover:bg-stone-700 transition-colors" data-method="Cash">
-                        <span>Physical Cash Deposit</span><span class="text-2xl">💵</span>
-                    </button>
-                    <button class="pay-method-btn w-full p-5 bg-stone-800 rounded-2xl flex justify-between items-center hover:bg-stone-700 transition-colors" data-method="LINE Pay">
-                        <span>LINE Pay Digital</span><span class="text-2xl">📱</span>
-                    </button>
-                    <button class="pay-method-btn w-full p-5 bg-stone-800 rounded-2xl flex justify-between items-center hover:bg-stone-700 transition-colors" data-method="Debit Card">
-                        <span>Debit Card Swipe</span><span class="text-2xl">💳</span>
-                    </button>
-                    <button class="pay-method-btn w-full p-5 bg-stone-800 rounded-2xl flex justify-between items-center hover:bg-stone-700 transition-colors" data-method="Credit Card">
-                        <span>Credit Card Charge</span><span class="text-2xl">🏦</span>
-                    </button>
-                </div>
-                <button id="back-to-packs" class="w-full mt-4 text-stone-500 text-xs text-center uppercase tracking-widest block">← Change Package</button>
+            <!-- Shop Grid -->
+            <div id="shop-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                <!-- Items injected via JS -->
             </div>
 
-            <!-- QR Section -->
-            <div id="qr-section" class="hidden text-center py-6">
-                <h2 id="qr-title" class="text-2xl font-royal text-amber-400 mb-6 uppercase">SCAN TO PAY</h2>
-                <div class="relative w-48 h-48 mx-auto bg-white p-4 rounded-3xl mb-8 shadow-[0_0_30px_rgba(255,255,255,0.2)]">
-                    <svg viewBox="0 0 100 100" class="w-full h-full text-black">
-                        <rect x="10" y="10" width="30" height="30" fill="currentColor"/>
-                        <rect x="60" y="10" width="30" height="30" fill="currentColor"/>
-                        <rect x="10" y="60" width="30" height="30" fill="currentColor"/>
-                        <rect x="45" y="45" width="20" height="20" fill="currentColor"/>
-                    </svg>
-                    <div class="qr-scanner-line"></div>
-                </div>
-                <button id="simulate-scan-btn" class="w-full py-5 bg-green-600 text-white font-bold rounded-2xl animate-pulse hover:bg-green-500 transition-colors">SIMULATE SUCCESSFUL SCAN</button>
+            <div class="flex justify-center mt-12">
+                <button id="close-shop" class="px-12 py-4 bg-amber-800 text-white font-bold rounded-2xl hover:bg-amber-900 transition-all uppercase tracking-widest text-lg shadow-xl">Back to Perya</button>
             </div>
-
-            <button id="close-modal-btn" class="absolute -top-4 -right-4 w-10 h-10 bg-amber-800 text-white font-bold rounded-full shadow-xl border-2 border-amber-400">×</button>
         </div>
     </div>
 
-    <div id="help-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-[1000] hidden items-center justify-center p-4">
-        <div class="bg-stone-900 border-4 border-amber-800 p-8 rounded-[3rem] max-w-2xl w-full shadow-2xl text-stone-200">
-            <h2 class="text-3xl font-royal text-amber-400 text-center mb-6">Imperial Rulebook</h2>
-            <ul class="space-y-4 text-sm leading-relaxed">
-                <li><b class="text-amber-500">1. Selection:</b> Click up to 3 cards on the table. Each card is an independent bet.</li>
-                <li><b class="text-amber-500">2. Wager:</b> Select your bet amount per card in Tokens (10, 20, or 50).</li>
-                <li><b class="text-amber-500">3. Drop:</b> Hold [SPACE] or the LAUNCH button to build energy. Release to drop 3 Imperial Orbs.</li>
-                <li><b class="text-amber-500">4. Bounty:</b> Win if an orb lands on your card! Multiple hits multiply the prize!</li>
-                <li><b class="text-amber-500">5. Treasury:</b> Use the gold [+] button to convert Imperial Dollars ($) into Tokens (🪙).</li>
-            </ul>
-            <button id="close-help-btn" class="w-full mt-8 py-4 bg-amber-600 rounded-2xl text-stone-900 font-bold">CLOSE</button>
+    <!-- Rules Modal -->
+    <div id="rules-modal" class="fixed inset-0 bg-black/98 backdrop-blur-3xl z-[1002] hidden items-center justify-center p-4">
+        <div class="parchment-pane p-8 md:p-12 rounded-[2rem] md:rounded-[4rem] max-w-4xl w-full shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <h2 class="text-4xl md:text-5xl font-royal text-amber-800 text-center mb-10 uppercase tracking-tighter border-b-4 border-amber-800/20 pb-4">Imperial Guide</h2>
+            
+            <div class="space-y-12">
+                <!-- How to Play -->
+                <section>
+                    <h3 class="text-2xl font-black text-amber-900 mb-4 uppercase tracking-wider flex items-center gap-3">
+                        <span class="bg-amber-800 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">1</span> The Sacred Ritual
+                    </h3>
+                    <div class="bg-white/40 p-6 rounded-2xl border border-amber-800/10 text-lg space-y-4 font-medium">
+                        <p>1. Choose up to <span class="text-amber-800 font-bold">3 lucky cards</span> from the table.</p>
+                        <p>2. Select your <span class="text-amber-800 font-bold">wager</span> per card.</p>
+                        <p>3. <span class="text-amber-800 font-bold">Hold SPACE</span> to charge power and release to see where the crystals land!</p>
+                    </div>
+                </section>
+
+                <!-- Card Ranks -->
+                <section>
+                    <h3 class="text-2xl font-black text-amber-900 mb-4 uppercase tracking-wider flex items-center gap-3">
+                        <span class="bg-amber-800 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span> Imperial Hierarchy
+                    </h3>
+                    <div class="grid grid-cols-4 gap-4 text-center">
+                        <div class="p-4 bg-white/40 rounded-xl border border-amber-800/10">
+                            <div class="text-3xl font-black text-amber-900">J</div>
+                            <div class="text-xs uppercase font-bold text-amber-800/60">Jack</div>
+                        </div>
+                        <div class="p-4 bg-white/40 rounded-xl border border-amber-800/10">
+                            <div class="text-3xl font-black text-amber-900">Q</div>
+                            <div class="text-xs uppercase font-bold text-amber-800/60">Queen</div>
+                        </div>
+                        <div class="p-4 bg-white/40 rounded-xl border border-amber-800/10">
+                            <div class="text-3xl font-black text-amber-900">K</div>
+                            <div class="text-xs uppercase font-bold text-amber-800/60">King</div>
+                        </div>
+                        <div class="p-4 bg-white/40 rounded-xl border border-amber-800/10">
+                            <div class="text-3xl font-black text-amber-900">A</div>
+                            <div class="text-xs uppercase font-bold text-amber-800/60">Ace</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Payouts -->
+                <section>
+                    <h3 class="text-2xl font-black text-amber-900 mb-4 uppercase tracking-wider flex items-center gap-3">
+                        <span class="bg-amber-800 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">3</span> The Royal Payouts
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-amber-800/10 p-6 rounded-2xl border-2 border-amber-800/20 text-center">
+                            <div class="text-amber-800 font-black text-3xl">2x</div>
+                            <div class="text-xs uppercase font-bold">1 Match</div>
+                        </div>
+                        <div class="bg-amber-800/20 p-6 rounded-2xl border-2 border-amber-800/40 text-center transform scale-105">
+                            <div class="text-amber-800 font-black text-3xl">3x</div>
+                            <div class="text-xs uppercase font-bold">2 Matches</div>
+                        </div>
+                        <div class="bg-amber-800/10 p-6 rounded-2xl border-2 border-amber-800/20 text-center">
+                            <div class="text-amber-800 font-black text-3xl">4x</div>
+                            <div class="text-xs uppercase font-bold">3 Matches</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="flex justify-center mt-12">
+                <button id="close-rules-bottom" class="px-12 py-4 bg-amber-800 text-white font-bold rounded-2xl hover:bg-amber-900 transition-all uppercase tracking-widest text-lg shadow-xl">Return to Table</button>
+            </div>
+            
+            <button id="close-rules" class="absolute top-6 right-6 text-3xl text-amber-900/40 hover:text-amber-900 font-black">×</button>
+        </div>
+    </div>
+
+    <!-- Treasury Modal -->
+    <div id="payment-modal" class="fixed inset-0 bg-black/95 backdrop-blur-3xl z-[1000] hidden items-center justify-center p-4">
+        <div class="bg-stone-900 border-4 border-amber-800 p-8 md:p-12 rounded-[5rem] max-w-5xl w-full shadow-2xl relative">
+            <div id="step-1">
+                <h2 class="text-5xl font-bold text-amber-400 text-center mb-10 uppercase">Royal Treasury</h2>
+                <div class="grid grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mb-12 max-h-[50vh] overflow-y-auto pr-2">
+                    <div class="vault-pack p-6 rounded-3xl text-center cursor-pointer border-2 border-amber-900/50 bg-stone-800/50 hover:border-amber-500 transition-all" data-tokens="100" data-price="50">
+                        <div class="text-3xl mb-2">🪙 100</div>
+                        <div class="text-amber-500 font-bold text-lg">NT$ 50</div>
+                        <div class="badge bg-green-600 text-white">Starter</div>
+                    </div>
+                    <div class="vault-pack p-6 rounded-3xl text-center cursor-pointer border-2 border-amber-900/50 bg-stone-800/50 hover:border-amber-500 transition-all" data-tokens="250" data-price="100">
+                        <div class="text-3xl mb-2">🪙 250</div>
+                        <div class="text-amber-500 font-bold text-lg">NT$ 100</div>
+                    </div>
+                    <div class="vault-pack p-6 rounded-3xl text-center cursor-pointer border-2 border-amber-900/50 bg-stone-800/50 hover:border-amber-500 transition-all" data-tokens="600" data-price="200">
+                        <div class="text-3xl mb-2">🪙 600</div>
+                        <div class="text-amber-500 font-bold text-lg">NT$ 200</div>
+                        <div class="badge badge-popular">Popular</div>
+                    </div>
+                    <div class="vault-pack p-6 rounded-3xl text-center cursor-pointer border-2 border-amber-900/50 bg-stone-800/50 hover:border-amber-500 transition-all" data-tokens="1500" data-price="500">
+                        <div class="text-3xl mb-2">🪙 1500</div>
+                        <div class="text-amber-500 font-bold text-lg">NT$ 500</div>
+                    </div>
+                    <div class="vault-pack p-6 rounded-3xl text-center cursor-pointer border-2 border-amber-900/50 bg-stone-800/50 hover:border-amber-500 transition-all" data-tokens="2500" data-price="1000">
+                        <div class="text-3xl mb-2">🪙 2500</div>
+                        <div class="text-amber-500 font-bold text-lg">NT$ 1,000</div>
+                        <div class="badge badge-premium">Premium</div>
+                    </div>
+                    <div class="vault-pack p-6 rounded-3xl text-center cursor-pointer border-2 border-amber-900/50 bg-stone-800/50 hover:border-amber-500 transition-all" data-tokens="10000" data-price="3500">
+                        <div class="text-3xl mb-2">🪙 10000</div>
+                        <div class="text-amber-500 font-bold text-lg">NT$ 3,500</div>
+                        <div class="badge bg-purple-700 text-white">Imperial</div>
+                    </div>
+                </div>
+                <button id="next-to-pay" class="w-full py-6 bg-amber-500 text-stone-900 font-bold rounded-3xl opacity-50 cursor-not-allowed text-2xl shadow-xl transition-all" disabled>CHOOSE PACK</button>
+            </div>
+            <div id="step-2" class="hidden">
+                <h2 class="text-4xl font-bold text-amber-400 text-center mb-8 uppercase">Payment Methods</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                    <button class="pay-method-btn p-4 bg-stone-800 rounded-2xl flex justify-between items-center hover:bg-stone-700 border border-white/5" data-method="JKOPAY">
+                        <span class="font-bold text-sm">🏮 JKOPAY</span>
+                    </button>
+                    <button class="pay-method-btn p-4 bg-stone-800 rounded-2xl flex justify-between items-center hover:bg-stone-700 border border-white/5" data-method="LINE Pay">
+                        <span class="font-bold text-sm">📱 LINE Pay</span>
+                    </button>
+                    <button class="pay-method-btn p-4 bg-stone-800 rounded-2xl flex justify-between items-center hover:bg-stone-700 border border-white/5" data-method="Credit Card">
+                        <span class="font-bold text-sm">🏦 Credit Card</span>
+                    </button>
+                    <button class="pay-method-btn p-4 bg-stone-800 rounded-2xl flex justify-between items-center hover:bg-stone-700 border border-white/5" data-method="Debit Card">
+                        <span class="font-bold text-sm">💳 Debit Card</span>
+                    </button>
+                    <button class="pay-method-btn p-4 bg-stone-800 rounded-2xl flex justify-between items-center hover:bg-stone-700 border border-white/5" data-method="Apple Pay">
+                        <span class="font-bold text-sm">🍎 Apple Pay</span>
+                    </button>
+                    <button class="pay-method-btn p-4 bg-stone-900 rounded-2xl border-2 border-amber-600/30 flex justify-between items-center hover:bg-amber-600 hover:text-stone-900" data-method="Cash">
+                        <span class="font-bold text-sm">💵 Physical Cash</span>
+                    </button>
+                </div>
+                <button id="back-to-packs" class="w-full py-4 bg-stone-800 text-stone-300 rounded-2xl font-bold uppercase hover:bg-stone-700 transition-all">← BACK</button>
+            </div>
+            <div id="qr-section" class="hidden flex flex-col items-center">
+                <h2 id="qr-method-title" class="text-4xl font-bold text-amber-400 mb-6 uppercase">SCAN TO PAY</h2>
+                <div class="w-64 h-64 bg-white p-6 rounded-3xl mb-8 flex items-center justify-center">
+                    <svg viewBox="0 0 100 100" class="w-full h-full text-black">
+                        <rect x="10" y="10" width="30" height="30" fill="currentColor"/><rect x="60" y="10" width="30" height="30" fill="currentColor"/><rect x="10" y="60" width="30" height="30" fill="currentColor"/><rect x="45" y="45" width="10" height="10" fill="currentColor"/>
+                    </svg>
+                </div>
+                <div id="trans-processing" class="hidden mb-6 flex items-center gap-3">
+                    <div class="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span class="text-amber-500 font-bold uppercase">Verifying...</span>
+                </div>
+                <div id="qr-actions" class="w-full space-y-4 max-w-sm">
+                    <button id="simulate-scan-btn" class="w-full py-6 bg-green-600 text-white font-bold rounded-2xl text-2xl shadow-xl hover:bg-green-500 transition-all">COMPLETE TRANSACTION</button>
+                    <button id="back-to-methods" class="w-full py-4 bg-stone-800 text-stone-400 rounded-2xl font-bold uppercase hover:bg-stone-700 transition-all">← CHANGE METHOD</button>
+                </div>
+            </div>
+            <button id="close-vault" class="absolute -top-6 -right-6 w-14 h-14 bg-amber-800 text-white rounded-full font-bold shadow-2xl border-2 border-amber-500 flex items-center justify-center hover:bg-amber-700 transition-colors text-2xl">×</button>
         </div>
     </div>
 
