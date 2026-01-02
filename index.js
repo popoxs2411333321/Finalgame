@@ -1,6 +1,7 @@
+
 import { GoogleGenAI } from "@google/genai";
 
-// --- Game Configuration ---
+// --- Configuration ---
 const INITIAL_BALANCE = 0; 
 const MAX_BETS = 3;
 const SUITS = ['HEARTS', 'SPADES', 'DIAMONDS'];
@@ -10,570 +11,473 @@ const RANK_NAMES = { J: 'Jack', Q: 'Queen', K: 'King', A: 'Ace' };
 const SUIT_NAMES = { HEARTS: 'Hearts', SPADES: 'Spades', DIAMONDS: 'Diamonds' };
 const COLORS = { HEARTS: 'text-red-600', SPADES: 'text-stone-900', DIAMONDS: 'text-red-500' };
 
-// --- Shop Data ---
-const SHOP_ITEMS = {
-    FOODS: [
-        { name: "Balut", price: 50, icon: "🥚" },
-        { name: "Fishballs", price: 60, icon: "🍢" },
-        { name: "Kwek-kwek", price: 70, icon: "🍘" },
-        { name: "Halo-Halo", price: 120, icon: "🍧" },
-        { name: "Lechon Manok", price: 350, icon: "🍗" },
-        { name: "Pancit Palabok", price: 180, icon: "🍝" },
-        { name: "Ube Halaya", price: 150, icon: "🍮" },
-        { name: "Lumpia", price: 90, icon: "🌯" },
-        { name: "Adobo Bowl", price: 200, icon: "🍲" },
-        { name: "Bibingka", price: 110, icon: "🥧" },
-        { name: "Puto Bumbong", price: 130, icon: "🍡" },
-        { name: "Turon", price: 80, icon: "🍌" },
-        { name: "Isaw", price: 65, icon: "🍢" },
-        { name: "Sisig Platter", price: 280, icon: "🍳" },
-        { name: "Royal Lechon", price: 1200, icon: "🐖" }
+const SHOP_DATA = {
+    foods: [
+        { name: 'Cotton Candy', price: 150, icon: '🍭', rarity: 'common' },
+        { name: 'Balut', price: 300, icon: '🥚', rarity: 'common' },
+        { name: 'Grilled Corn', price: 100, icon: '🌽', rarity: 'common' },
+        { name: 'Ice Scramble', price: 200, icon: '🍧', rarity: 'rare' },
+        { name: 'Fishball Cup', price: 120, icon: '🍢', rarity: 'common' },
+        { name: 'Ube Cake', price: 800, icon: '🍰', rarity: 'rare' }
     ],
-    THINGS: [
-        { name: "Lucky Charm", price: 100, icon: "🧿" },
-        { name: "Fiesta Fan", price: 150, icon: "🪭" },
-        { name: "Woven Hat", price: 220, icon: "👒" },
-        { name: "Wooden Jeepney", price: 450, icon: "🚐" },
-        { name: "Hand Bracelet", price: 80, icon: "📿" },
-        { name: "Imperial Fan", price: 300, icon: "🎋" },
-        { name: "Silk Scarf", price: 550, icon: "🧣" },
-        { name: "Gilded Cards", price: 800, icon: "🃏" },
-        { name: "Perya Badge", price: 1500, icon: "🎖️" },
-        { name: "Golden Rooster", price: 2000, icon: "🐓" },
-        { name: "Coin Bank", price: 120, icon: "🥥" },
-        { name: "Shell Lamp", price: 650, icon: "🏮" },
-        { name: "Rattan Basket", price: 320, icon: "🧺" },
-        { name: "Paper Kite", price: 180, icon: "🪁" },
-        { name: "Abaca Bag", price: 480, icon: "👜" }
+    toys: [
+        { name: 'Stuffed Bear', price: 1500, icon: '🧸', rarity: 'rare' },
+        { name: 'Water Gun', price: 500, icon: '🔫', rarity: 'common' },
+        { name: 'Bubble Wand', price: 250, icon: '🧼', rarity: 'common' },
+        { name: 'Yo-Yo', price: 150, icon: '🪀', rarity: 'common' },
+        { name: 'Clown Mask', price: 600, icon: '🤡', rarity: 'rare' },
+        { name: 'Robot Pal', price: 3500, icon: '🤖', rarity: 'epic' }
+    ],
+    keychains: [
+        { name: 'Lucky Heart', price: 1000, icon: '🔑', rarity: 'rare' },
+        { name: 'Spade Charm', price: 1000, icon: '🗝️', rarity: 'rare' },
+        { name: 'Diamond Coin', price: 1200, icon: '💎', rarity: 'rare' },
+        { name: 'Golden Ace', price: 5000, icon: '👑', rarity: 'legendary' },
+        { name: 'Tassel Charm', price: 400, icon: '🧶', rarity: 'common' }
+    ],
+    special: [
+        { name: 'Imperial Mystery Ticket', price: 10000, icon: '🎫', rarity: 'legendary' },
+        { name: 'Royal Scepter', price: 25000, icon: '🔱', rarity: 'legendary' },
+        { name: 'Phoenix Crystal', price: 15000, icon: '🔮', rarity: 'epic' },
+        { name: 'Golden Fiesta Ticket', price: 50000, icon: '🎟️', rarity: 'legendary' }
     ]
 };
 
-// Ornate Filigree SVG
-const FILIGREE_SVG = `
-<svg viewBox="0 0 100 100" fill="currentColor">
-  <path d="M10,10 Q25,0 40,10 Q50,20 40,30 Q25,40 10,30 Q0,20 10,10 Z" fill="none" stroke="currentColor" stroke-width="2" />
-  <path d="M15,15 Q25,10 35,15 Q40,20 35,25 Q25,30 15,25 Q10,20 15,15 Z" fill="currentColor" opacity="0.4" />
-  <circle cx="10" cy="10" r="3" fill="currentColor" />
-</svg>`;
-
-// --- AI Barker Setup ---
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-async function barkerTalk(context) {
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: `You are an enthusiastic international carnival dealer for a Royal Card Game. 
-            Speak strictly in English with a festive, energetic, and loud personality. 
-            Keep it very short (under 12 words). 
-            Context: ${context}`,
-            config: {
-                systemInstruction: "You are a professional carnival barker. Use strictly English. Be festive and loud.",
-                temperature: 0.8
-            }
-        });
-        if (response.text) {
-            dealerMsg.innerText = `"${response.text.trim()}"`;
-        }
-    } catch (e) {
-        console.error("Barker Error:", e);
-        dealerMsg.innerText = `"Step right up! Place your bets on the Imperial Cards!"`;
-    }
-}
-
-// --- Global State ---
+// --- State ---
 let balanceTokens = INITIAL_BALANCE;
-let currentBets = []; 
+let hasToppedUp = false; 
+let currentBets = [];
 let isDrawing = false;
 let cards = [];
 let betAmountPerCard = 10;
-let selectedPack = null;
 let audioCtx = null;
-let currentShopTab = 'FOODS';
-
-const ballIds = [0, 1, 2];
-let activeBallsFinished = 0;
-let winningIndices = [];
 let isCharging = false;
 let chargePower = 0;
 let chargeDirection = 1;
 let chargeInterval = null;
+let winningIndices = [];
+let activeBallsFinished = 0;
+let selectedPack = null;
+let selectedPaymentMethod = null;
+let activeShopTab = 'foods';
 
-// Persistent Audio Nodes for Charging
-let chargingOsc = null;
+// Audio Nodes
+let chargingOscPitch = null;
+let chargingOscBass = null;
 let chargingGain = null;
 
-// --- DOM Elements ---
-const cursorEl = document.getElementById('custom-cursor');
-const cardGrid = document.getElementById('card-grid');
-const balanceTxt = document.getElementById('balance-txt');
-const betCountTxt = document.getElementById('bet-count-txt');
-const dealerMsg = document.getElementById('dealer-msg');
-const resultsArea = document.getElementById('results-area');
-const drawBtn = document.getElementById('draw-btn');
-const refillBtn = document.getElementById('refill-btn');
-const betButtons = document.querySelectorAll('#bet-amount-selector button');
-const powerFill = document.getElementById('power-fill');
-const fullscreenToggle = document.getElementById('fullscreen-toggle');
-const activeCardBanner = document.getElementById('active-card-banner');
-
-const rulesModal = document.getElementById('rules-modal');
-const rulesToggleBtn = document.getElementById('rules-toggle-btn');
-const closeRulesBtn = document.getElementById('close-rules');
-const closeRulesBottomBtn = document.getElementById('close-rules-bottom');
-
-const shopModal = document.getElementById('shop-modal');
-const shopToggleBtn = document.getElementById('shop-toggle-btn');
-const closeShopBtn = document.getElementById('close-shop');
-const tabFoodsBtn = document.getElementById('tab-foods');
-const tabThingsBtn = document.getElementById('tab-things');
-const shopGrid = document.getElementById('shop-grid');
-
-const paymentModal = document.getElementById('payment-modal');
-const step1 = document.getElementById('step-1');
-const step2 = document.getElementById('step-2');
-const qrSection = document.getElementById('qr-section');
-const transProcessing = document.getElementById('trans-processing');
-const vaultPacks = document.querySelectorAll('.vault-pack');
-const nextToPayBtn = document.getElementById('next-to-pay');
-const backToPacksBtn = document.getElementById('back-to-packs');
-const payMethodBtns = document.querySelectorAll('.pay-method-btn');
-const simulateScanBtn = document.getElementById('simulate-scan-btn');
-const closeVaultBtn = document.getElementById('close-vault');
-
-// --- Initialization ---
+// --- Init ---
 function init() {
+    setupCards();
+    setupEventListeners();
     setupCursor();
+    updateUI();
     initConfetti();
+    renderShop();
+    barkerTalk("Greeting a guest. Remind them the table requires a treasury deposit to activate.");
+}
+
+function setupCards() {
     cards = [];
     SUITS.forEach(suit => RANKS.forEach(rank => cards.push({ id: `${suit}-${rank}`, suit, rank })));
     renderCards();
-    setupBetSelectors();
-    setupLaunchMechanic();
-    setupModals();
-    setupFullscreen();
-    updateUI();
-    
-    if (INITIAL_BALANCE === 0) {
-        barkerTalk("Greeting a player with an empty wallet. Suggest visiting the Royal Treasury.");
-    } else {
-        barkerTalk("Welcoming the player back to the grand Imperial Table.");
-    }
-}
-
-function playSound(freq = 440, type = 'sine', duration = 0.1) {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + duration);
-}
-
-function initConfetti() {
-    const holder = document.getElementById('confetti-holder');
-    const colors = ['#ef4444', '#fbbf24', '#3b82f6', '#22c55e', '#ffffff'];
-    setInterval(() => {
-        const c = document.createElement('div');
-        c.className = 'confetti';
-        c.style.left = Math.random() * 100 + 'vw';
-        c.style.setProperty('--color', colors[Math.floor(Math.random() * colors.length)]);
-        c.style.setProperty('--duration', (3 + Math.random() * 4) + 's');
-        holder.appendChild(c);
-        setTimeout(() => c.remove(), 7000);
-    }, 800);
-}
-
-function setupCursor() {
-    window.addEventListener('mousemove', (e) => {
-        cursorEl.style.left = `${e.clientX}px`;
-        cursorEl.style.top = `${e.clientY}px`;
-        const target = e.target;
-        const isInteractive = target.closest('button, .perya-card, .vault-pack, .pay-method-btn, .item-card');
-        cursorEl.classList.toggle('hovering', !!isInteractive);
-    });
-}
-
-function setupFullscreen() {
-    fullscreenToggle.onclick = () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(e => console.error(e));
-        } else {
-            document.exitFullscreen();
-        }
-    };
-}
-
-function createCelestialBurst(x, y) {
-    const particleCount = 12;
-    for (let i = 0; i < particleCount; i++) {
-        const p = document.createElement('div');
-        p.className = 'celestial-sparkle';
-        document.body.appendChild(p);
-        
-        const angle = (Math.PI * 2 / particleCount) * i;
-        const velocity = 2 + Math.random() * 4;
-        const vx = Math.cos(angle) * velocity;
-        const vy = Math.sin(angle) * velocity;
-        
-        let px = x;
-        let py = y;
-        let opacity = 1;
-        let scale = 1;
-        
-        const animate = () => {
-            px += vx;
-            py += vy + 0.1; // gravity
-            opacity -= 0.02;
-            scale -= 0.015;
-            
-            p.style.transform = `translate(${px}px, ${py}px) scale(${Math.max(0, scale)}) rotate(${opacity * 360}deg)`;
-            p.style.opacity = opacity;
-            
-            if (opacity > 0) {
-                requestAnimationFrame(animate);
-            } else {
-                p.remove();
-            }
-        };
-        animate();
-    }
 }
 
 function renderCards() {
-    cardGrid.innerHTML = '';
+    const grid = document.getElementById('card-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
     cards.forEach(card => {
         const btn = document.createElement('button');
+        btn.className = 'perya-card aspect-[2.5/3.5] flex flex-col items-center justify-center relative';
         btn.id = `card-${card.id}`;
-        btn.className = 'perya-card aspect-[2.5/3.5] flex flex-col items-center justify-center';
         
-        // Use direct click listener to avoid grid interaction issues
-        btn.addEventListener('click', (e) => handleCardClick(card.id, e));
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            handleCardClick(card.id);
+        };
         
-        btn.onmouseenter = () => { if(!isDrawing) activeCardBanner.innerText = `${RANK_NAMES[card.rank]} OF ${SUIT_NAMES[card.suit]}`; };
-        btn.onmouseleave = () => { if (!isDrawing) activeCardBanner.innerText = "CHOOSE YOUR FATE"; };
-        
+        btn.onmouseenter = () => {
+            if(!isDrawing) {
+                const banner = document.getElementById('active-card-banner');
+                if (banner) banner.innerText = `${RANK_NAMES[card.rank]} OF ${SUIT_NAMES[card.suit]}`;
+            }
+        };
+
         btn.innerHTML = `
-            <div class="filigree filigree-tl">${FILIGREE_SVG}</div>
-            <div class="filigree filigree-tr">${FILIGREE_SVG}</div>
-            <div class="filigree filigree-bl">${FILIGREE_SVG}</div>
-            <div class="filigree filigree-br">${FILIGREE_SVG}</div>
-            <div class="absolute top-4 left-4 font-black ${COLORS[card.suit]} drop-shadow-sm text-lg pointer-events-none">${card.rank}</div>
-            <div class="text-7xl ${COLORS[card.suit]} drop-shadow-md select-none pointer-events-none">${SYMBOLS[card.suit]}</div>
-            <div class="absolute bottom-4 right-4 font-black rotate-180 ${COLORS[card.suit]} drop-shadow-sm text-lg pointer-events-none">${card.rank}</div>
-            <div class="bet-badge uppercase pointer-events-none">PLACED</div>
+            <div class="absolute top-4 left-4 font-black ${COLORS[card.suit]} text-xs pointer-events-none drop-shadow-sm">${card.rank}</div>
+            <div class="text-6xl ${COLORS[card.suit]} pointer-events-none drop-shadow-md select-none">${SYMBOLS[card.suit]}</div>
+            <div class="absolute bottom-4 right-4 font-black rotate-180 ${COLORS[card.suit]} text-xs pointer-events-none drop-shadow-sm">${card.rank}</div>
         `;
-        cardGrid.appendChild(btn);
+        grid.appendChild(btn);
     });
 
     const ballLayer = document.getElementById('ball-layer');
-    ballLayer.innerHTML = '';
-    ballIds.forEach(id => {
-        const shadow = document.createElement('div');
-        shadow.id = `ball-shadow-${id}`; shadow.className = 'ball-shadow';
-        ballLayer.appendChild(shadow);
-        const b = document.createElement('div');
-        b.id = `ball-${id}`; b.className = 'selection-ball';
-        ballLayer.appendChild(b);
+    if (ballLayer) {
+        ballLayer.innerHTML = '';
+        for(let i=0; i<3; i++) {
+            const shadow = document.createElement('div'); shadow.id = `ball-shadow-${i}`; shadow.className = 'ball-shadow';
+            const ball = document.createElement('div'); ball.id = `ball-${i}`; ball.className = 'selection-ball';
+            ballLayer.appendChild(shadow);
+            ballLayer.appendChild(ball);
+        }
+    }
+}
+
+function renderShop() {
+    const grid = document.getElementById('shop-grid');
+    if (!grid) return;
+    const items = SHOP_DATA[activeShopTab];
+    grid.innerHTML = items.map(item => `
+        <div class="item-card p-4 rounded-xl text-center cursor-pointer ${item.rarity}" onclick="buyItem('${item.name}', ${item.price}, '${item.icon}', '${item.rarity}')">
+            <div class="text-4xl mb-2 drop-shadow-lg">${item.icon}</div>
+            <div class="text-white font-bold text-[10px] uppercase tracking-wider truncate">${item.name}</div>
+            <div class="text-amber-500 text-[11px] font-black mt-1">🪙 ${item.price.toLocaleString()}</div>
+            <div class="text-[8px] uppercase font-black opacity-40 mt-1 ${getRarityColor(item.rarity)}">${item.rarity}</div>
+        </div>
+    `).join('');
+
+    document.querySelectorAll('.shop-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.id === `tab-${activeShopTab}`);
     });
 }
 
-function handleCardClick(id, event) {
-    if (isDrawing) return;
-    const idx = currentBets.indexOf(id);
-    const isAdding = idx === -1;
-    
-    if (!isAdding) {
-        currentBets.splice(idx, 1);
-    } else if (currentBets.length < MAX_BETS) {
-        currentBets.push(id);
-        createCelestialBurst(event.clientX, event.clientY);
+function getRarityColor(rarity) {
+    switch(rarity) {
+        case 'common': return 'text-slate-400';
+        case 'rare': return 'text-blue-400';
+        case 'epic': return 'text-purple-400';
+        case 'legendary': return 'text-amber-400';
+        default: return 'text-slate-400';
+    }
+}
+
+function setupEventListeners() {
+    const fullToggle = document.getElementById('fullscreen-toggle');
+    if (fullToggle) {
+        fullToggle.onclick = () => {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else document.exitFullscreen();
+        };
+    }
+
+    document.querySelectorAll('#bet-amount-selector button').forEach(btn => {
+        btn.onclick = () => {
+            if(isDrawing) return;
+            betAmountPerCard = parseInt(btn.dataset.amount);
+            document.querySelectorAll('#bet-amount-selector button').forEach(b => b.className = 'w-14 h-14 rounded-full bg-stone-800 text-amber-500 border border-amber-500/30 font-bold');
+            btn.className = 'w-14 h-14 rounded-full bg-amber-500 text-stone-900 font-bold active shadow-lg';
+            playSound(520);
+        };
+    });
+
+    const refillBtn = document.getElementById('refill-btn');
+    if (refillBtn) {
+        refillBtn.onclick = () => {
+            document.getElementById('payment-modal').style.display = 'flex';
+            document.getElementById('payment-selection-view').style.display = 'block';
+            document.getElementById('payment-scanning-view').style.display = 'none';
+        };
     }
     
-    playSound(isAdding ? 660 : 440);
-    updateUI();
-}
-
-function setupBetSelectors() {
-    betButtons.forEach(btn => btn.onclick = () => {
-        if (isDrawing) return;
-        betAmountPerCard = parseInt(btn.dataset.amount);
-        betButtons.forEach(b => {
-            b.classList.remove('bg-amber-500', 'text-stone-900');
-            b.classList.add('bg-stone-800', 'text-amber-500', 'border-2', 'border-amber-500');
-        });
-        btn.classList.add('bg-amber-500', 'text-stone-900');
-        btn.classList.remove('bg-stone-800', 'text-amber-500', 'border-2', 'border-amber-500');
-        playSound(520);
-    });
-}
-
-function setupModals() {
-    rulesToggleBtn.onclick = () => { rulesModal.style.display = 'flex'; playSound(880); };
-    const closeRules = () => { rulesModal.style.display = 'none'; playSound(440); };
-    closeRulesBtn.onclick = closeRules;
-    closeRulesBottomBtn.onclick = closeRules;
-
-    shopToggleBtn.onclick = () => { shopModal.style.display = 'flex'; renderShopItems(); playSound(880); };
-    closeShopBtn.onclick = () => { shopModal.style.display = 'none'; playSound(440); };
+    document.getElementById('rules-toggle-btn').onclick = () => document.getElementById('rules-modal').style.display = 'flex';
+    document.getElementById('shop-toggle-btn').onclick = () => {
+        document.getElementById('shop-modal').style.display = 'flex';
+        renderShop();
+    };
     
-    tabFoodsBtn.onclick = () => { currentShopTab = 'FOODS'; tabFoodsBtn.classList.add('active'); tabThingsBtn.classList.remove('active'); renderShopItems(); playSound(660); };
-    tabThingsBtn.onclick = () => { currentShopTab = 'THINGS'; tabThingsBtn.classList.add('active'); tabFoodsBtn.classList.remove('active'); renderShopItems(); playSound(660); };
-
-    refillBtn.onclick = () => { paymentModal.style.display = 'flex'; resetRefillFlow(); playSound(880); };
-    vaultPacks.forEach(pack => pack.onclick = () => {
-        vaultPacks.forEach(p => p.classList.remove('active', 'border-amber-500', 'bg-amber-500/20'));
-        pack.classList.add('active', 'border-amber-500', 'bg-amber-500/20');
-        selectedPack = { tokens: parseInt(pack.dataset.tokens), price: pack.dataset.price };
-        nextToPayBtn.disabled = false;
-        nextToPayBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        nextToPayBtn.innerText = `REDEEM FOR NT$ ${selectedPack.price}`;
-        playSound(660);
+    document.querySelectorAll('.close-modal').forEach(btn => {
+        btn.onclick = () => btn.closest('.modal').style.display = 'none';
     });
 
-    nextToPayBtn.onclick = () => { step1.classList.add('hidden'); step2.classList.remove('hidden'); playSound(880); };
-    backToPacksBtn.onclick = () => { step2.classList.add('hidden'); step1.classList.remove('hidden'); playSound(440); };
-
-    payMethodBtns.forEach(btn => btn.onclick = () => {
-        const method = btn.dataset.method;
-        if (!selectedPack) return;
-        step2.classList.add('hidden');
-        qrSection.classList.remove('hidden');
-        document.getElementById('qr-method-title').innerText = `COMPLETE VIA ${method.toUpperCase()}`;
-        playSound(880);
-    });
-
-    simulateScanBtn.onclick = async () => {
-        if (!selectedPack) return;
-        transProcessing.classList.remove('hidden');
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        completeRefill(selectedPack.tokens);
+    document.getElementById('close-reveal').onclick = () => {
+        document.getElementById('reveal-item-display').classList.remove('active');
+        setTimeout(() => document.getElementById('purchase-reveal-modal').style.display = 'none', 500);
+        playSound(440, 'sine', 0.1);
     };
 
-    closeVaultBtn.onclick = () => { paymentModal.style.display = 'none'; playSound(440); };
-}
+    document.getElementById('close-confirmation').onclick = () => {
+        document.getElementById('purchase-confirmation-modal').style.display = 'none';
+        playSound(440, 'sine', 0.1);
+    };
 
-function renderShopItems() {
-    shopGrid.innerHTML = '';
-    const items = SHOP_ITEMS[currentShopTab];
-    items.forEach(item => {
-        const canAfford = balanceTokens >= item.price;
-        const card = document.createElement('div');
-        card.className = `item-card p-6 rounded-3xl flex flex-col items-center gap-3 ${!canAfford ? 'opacity-50' : ''}`;
-        card.innerHTML = `
-            <div class="text-5xl mb-2">${item.icon}</div>
-            <div class="font-black text-amber-950 text-center uppercase text-sm">${item.name}</div>
-            <div class="text-amber-800 font-bold">🪙${item.price}</div>
-            <button class="buy-btn mt-4 w-full py-2 bg-amber-800 text-white rounded-xl font-bold uppercase text-xs hover:bg-amber-900 transition-all ${!canAfford ? 'cursor-not-allowed grayscale' : ''}" ${!canAfford ? 'disabled' : ''}>Exchange</button>
-        `;
-        card.querySelector('.buy-btn').onclick = () => handlePurchase(item);
-        shopGrid.appendChild(card);
+    document.querySelectorAll('.vault-pack').forEach(pack => {
+        pack.onclick = () => {
+            selectedPack = { tokens: parseInt(pack.dataset.tokens) };
+            document.querySelectorAll('.vault-pack').forEach(p => p.classList.remove('border-amber-500', 'bg-amber-500/20'));
+            pack.classList.add('border-amber-500', 'bg-amber-500/20');
+            updateTreasuryButton();
+            playSound(660);
+        };
     });
+
+    document.querySelectorAll('.payment-method-btn').forEach(btn => {
+        btn.onclick = () => {
+            selectedPaymentMethod = btn.dataset.method;
+            document.querySelectorAll('.payment-method-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            updateTreasuryButton();
+            playSound(720, 'sine', 0.05);
+        };
+    });
+
+    function updateTreasuryButton() {
+        const confirmBtn = document.getElementById('complete-purchase');
+        if (selectedPack && selectedPaymentMethod) {
+            confirmBtn.disabled = false; confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            confirmBtn.innerText = `Proceed with ${selectedPaymentMethod.toUpperCase()}`;
+        } else {
+            confirmBtn.disabled = true; confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    document.getElementById('complete-purchase').onclick = async () => {
+        if(!selectedPack || !selectedPaymentMethod) return;
+        if (selectedPaymentMethod === 'cash') { processPayment(); return; }
+        
+        document.getElementById('payment-selection-view').style.display = 'none';
+        document.getElementById('payment-scanning-view').style.display = 'flex';
+        const scanStatus = document.getElementById('scanning-status');
+        
+        scanStatus.innerText = "ESTABLISHING SECURE HANDSHAKE..."; playSound(400, 'sine', 0.1);
+        await new Promise(r => setTimeout(r, 1200));
+        scanStatus.innerText = "WAITING FOR DEVICE RESPONSE..."; playSound(440, 'sine', 0.1);
+        await new Promise(r => setTimeout(r, 2000));
+        scanStatus.innerText = "SCAN SUCCESSFUL. VERIFYING..."; playSound(880, 'sine', 0.05);
+        await new Promise(r => setTimeout(r, 1000));
+        processPayment();
+    };
+
+    async function processPayment() {
+        const acquired = selectedPack.tokens;
+        balanceTokens += acquired; hasToppedUp = true; updateUI();
+        
+        // Populate and show confirmation modal
+        document.getElementById('confirm-acquired-tokens').innerText = `🪙 ${acquired.toLocaleString()}`;
+        document.getElementById('confirm-new-balance').innerText = `🪙 ${balanceTokens.toLocaleString()}`;
+        
+        document.getElementById('payment-modal').style.display = 'none';
+        document.getElementById('purchase-confirmation-modal').style.display = 'flex';
+        
+        selectedPack = null; selectedPaymentMethod = null;
+        document.querySelectorAll('.payment-method-btn').forEach(b => b.classList.remove('selected'));
+        
+        barkerTalk("Treasury visit successful! The table is now live!");
+        playSound(880, 'square'); initConfetti();
+    }
+
+    document.getElementById('cancel-scan').onclick = () => {
+        document.getElementById('payment-selection-view').style.display = 'block';
+        document.getElementById('payment-scanning-view').style.display = 'none';
+    };
+
+    window.addEventListener('buy-item', (e) => {
+        const { name, price, icon, rarity } = e.detail;
+        if (balanceTokens >= price) {
+            balanceTokens -= price; updateUI();
+            triggerPurchaseReveal(name, icon, rarity);
+        } else {
+            playSound(150, 'sawtooth', 0.4);
+            alert("Insufficient tokens!");
+        }
+    });
+
+    window.addEventListener('switch-tab', (e) => {
+        activeShopTab = e.detail.category; renderShop(); playSound(440, 'sine', 0.05);
+    });
+
+    const drawBtn = document.getElementById('draw-btn');
+    drawBtn.addEventListener('mousedown', () => startCharging());
+    window.addEventListener('mouseup', () => stopCharging());
+    window.addEventListener('keydown', (e) => { if(e.code === 'Space') startCharging(); });
+    window.addEventListener('keyup', (e) => { if(e.code === 'Space') stopCharging(); });
 }
 
-function handlePurchase(item) {
-    if (balanceTokens >= item.price) {
-        balanceTokens -= item.price;
-        updateUI();
-        renderShopItems();
-        playSound(1100, 'square', 0.2);
-        barkerTalk(`User exchanged tokens for ${item.name}! Perfect choice.`);
-        
-        const msg = document.createElement('div');
-        msg.className = 'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-amber-500 text-stone-900 font-black px-12 py-6 rounded-3xl shadow-2xl z-[2000] text-3xl animate-bounce uppercase tracking-widest';
-        msg.innerText = `Obtained ${item.name}!`;
-        document.body.appendChild(msg);
-        setTimeout(() => msg.remove(), 2000);
+async function triggerPurchaseReveal(name, icon, rarity) {
+    const revealModal = document.getElementById('purchase-reveal-modal');
+    const rarityTxt = document.getElementById('reveal-rarity-txt');
+    const nameTxt = document.getElementById('reveal-name');
+    const iconDisplay = document.getElementById('reveal-icon');
+    const itemDisplay = document.getElementById('reveal-item-display');
+    const spotlight = document.getElementById('reveal-spotlight');
+
+    revealModal.style.display = 'flex'; itemDisplay.classList.remove('active');
+    rarityTxt.innerText = `${rarity.toUpperCase()} ITEM`; nameTxt.innerText = name; iconDisplay.innerText = icon;
+
+    let revealColor = '#94a3b8';
+    switch(rarity) {
+        case 'rare': revealColor = '#3b82f6'; break;
+        case 'epic': revealColor = '#a855f7'; break;
+        case 'legendary': revealColor = '#fbbf24'; break;
+    }
+    rarityTxt.style.color = revealColor;
+    spotlight.style.background = `radial-gradient(circle at center, ${revealColor}33 0%, transparent 70%)`;
+
+    playSound(200, 'square', 0.5); await new Promise(r => setTimeout(r, 400));
+    playSound(400, 'sine', 0.1); await new Promise(r => setTimeout(r, 100));
+    playSound(800, 'sine', 0.2);
+    itemDisplay.classList.add('active');
+    
+    if (rarity === 'legendary') {
+        playSound(1200, 'square', 0.6); initConfetti();
+        barkerTalk(`THRILLING! You acquired the Legendary ${name}!`);
+    } else {
+        playSound(900, 'sine', 0.4);
+        barkerTalk(`Exquisite choice! The ${name} is now yours.`);
     }
 }
 
-function resetRefillFlow() {
-    step1.classList.remove('hidden'); step2.classList.add('hidden'); qrSection.classList.add('hidden');
-    vaultPacks.forEach(p => p.classList.remove('active', 'border-amber-500', 'bg-amber-500/20'));
-    nextToPayBtn.disabled = true; nextToPayBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    nextToPayBtn.innerText = 'CHOOSE PACK';
-    selectedPack = null;
-    transProcessing.classList.add('hidden');
-}
-
-function completeRefill(amount) {
-    balanceTokens += amount;
-    paymentModal.style.display = 'none';
-    barkerTalk(`Tokens successfully added! Good luck at the table!`);
-    playSound(1200, 'square', 0.3);
+function handleCardClick(id) {
+    if (isDrawing) return;
+    const idx = currentBets.indexOf(id);
+    if (idx !== -1) currentBets.splice(idx, 1);
+    else if (currentBets.length < MAX_BETS) currentBets.push(id);
+    playSound(idx !== -1 ? 440 : 660);
     updateUI();
 }
 
 function updateUI() {
-    balanceTxt.innerText = balanceTokens.toLocaleString();
-    betCountTxt.innerText = `${currentBets.length} / ${MAX_BETS}`;
-    const cost = currentBets.length * betAmountPerCard;
-    drawBtn.disabled = currentBets.length === 0 || isDrawing || balanceTokens < cost;
-    
-    if (balanceTokens === 0 && !isDrawing) {
-        dealerMsg.innerText = `"Your wallet is empty, friend! Head to the Treasury for some lucky coins!"`;
+    const balEl = document.getElementById('balance-txt'); if (balEl) balEl.innerText = balanceTokens.toLocaleString();
+    const countEl = document.getElementById('bet-count-txt'); if (countEl) countEl.innerText = `${currentBets.length} / ${MAX_BETS}`;
+    const drawBtn = document.getElementById('draw-btn'); const isLocked = !hasToppedUp;
+    if (drawBtn) {
+        drawBtn.disabled = isDrawing || currentBets.length === 0 || balanceTokens < (currentBets.length * betAmountPerCard) || isLocked;
+        drawBtn.innerText = isLocked ? "VISIT TREASURY FIRST" : "HOLD SPACE";
     }
-
     cards.forEach(c => {
         const el = document.getElementById(`card-${c.id}`);
-        if (el) el.classList.toggle('selected', currentBets.includes(c.id));
+        if(el) el.classList.toggle('selected', currentBets.includes(c.id));
     });
 }
 
-function setupLaunchMechanic() {
-    const startCharging = () => {
-        if (isDrawing || currentBets.length === 0 || isCharging) return;
-        const cost = currentBets.length * betAmountPerCard;
-        if (balanceTokens < cost) {
-            barkerTalk("You need more tokens to play this round!");
-            return;
-        }
-
-        isCharging = true; 
-        chargePower = 0; 
-        chargeDirection = 1;
-
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        chargingOsc = audioCtx.createOscillator();
-        chargingGain = audioCtx.createGain();
-        chargingOsc.type = 'sawtooth';
-        chargingOsc.frequency.setValueAtTime(100, audioCtx.currentTime);
-        chargingGain.gain.setValueAtTime(0, audioCtx.currentTime);
-        chargingGain.gain.linearRampToValueAtTime(0.04, audioCtx.currentTime + 0.1);
-        chargingOsc.connect(chargingGain);
-        chargingGain.connect(audioCtx.destination);
-        chargingOsc.start();
-
-        chargeInterval = setInterval(() => {
-            chargePower += 3 * chargeDirection;
-            if (chargePower >= 100 || chargePower <= 0) chargeDirection *= -1;
-            powerFill.style.width = `${chargePower}%`;
-            
-            const targetFreq = 100 + (chargePower * 6);
-            chargingOsc.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 0.05);
-            chargingGain.gain.setTargetAtTime(0.02 + (chargePower * 0.0004), audioCtx.currentTime, 0.05);
-        }, 30);
-    };
-
-    const stopCharging = () => {
-        if (!isCharging) return;
-        isCharging = false; 
-        clearInterval(chargeInterval);
-
-        if (chargingGain) {
-            chargingGain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.1);
-            setTimeout(() => {
-                if (chargingOsc) {
-                    chargingOsc.stop();
-                    chargingOsc.disconnect();
-                }
-                chargingGain.disconnect();
-            }, 150);
-        }
-
-        handleLaunch(chargePower);
-        powerFill.style.width = '0%';
-    };
-
-    drawBtn.addEventListener('mousedown', startCharging);
-    window.addEventListener('mouseup', stopCharging);
-
-    window.addEventListener('keydown', (e) => {
-        if (e.code === 'Space') {
-            e.preventDefault();
-            if (!isCharging && !isDrawing && currentBets.length > 0) {
-                startCharging();
-            }
-        }
-    });
-    window.addEventListener('keyup', (e) => {
-        if (e.code === 'Space' && isCharging) {
-            e.preventDefault();
-            stopCharging();
-        }
-    });
-}
-
-async function handleLaunch(power) {
-    if(isDrawing) return;
-    isDrawing = true;
-    activeBallsFinished = 0;
-    winningIndices = [];
-    balanceTokens -= currentBets.length * betAmountPerCard;
-    updateUI();
+function startCharging() {
+    if (isDrawing || currentBets.length === 0 || isCharging || !hasToppedUp) return;
+    if (balanceTokens < (currentBets.length * betAmountPerCard)) return;
+    isCharging = true; chargePower = 0; chargeDirection = 1;
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    chargingGain = audioCtx.createGain(); chargingGain.gain.setValueAtTime(0, audioCtx.currentTime);
+    chargingGain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 0.1);
+    chargingGain.connect(audioCtx.destination);
     
-    barkerTalk("The Imperial Crystals are falling! Where will they land?");
-    resultsArea.innerHTML = '<span class="text-amber-500 animate-pulse uppercase font-bold tracking-widest text-lg">Crystals are Falling...</span>';
-
-    ballIds.forEach(id => {
-        const ballEl = document.getElementById(`ball-${id}`);
-        const shadowEl = document.getElementById(`ball-shadow-${id}`);
-        ballEl.style.display = 'block';
-        shadowEl.style.display = 'block';
-
-        let currentIdx = -1;
-        const totalHops = 14 + Math.floor(Math.random() * 8);
-        let currentHop = 0;
-
-        const performHop = () => {
-            currentIdx = Math.floor(Math.random() * cards.length);
-            const target = document.getElementById(`card-${cards[currentIdx].id}`);
-            const ballX = target.offsetLeft + (target.offsetWidth / 2) - 18;
-            const ballY = target.offsetTop + (target.offsetHeight / 2) - 18;
-            
-            const progress = currentHop / totalHops;
-            const duration = 0.15 + (progress * 0.6);
-
-            ballEl.style.transition = `transform ${duration}s cubic-bezier(0.25, 0.46, 0.45, 0.94)`;
-            ballEl.style.transform = `translate(${ballX}px, ${ballY}px) translateZ(${150 * (1 - progress)}px)`;
-            
-            shadowEl.style.transition = `transform ${duration}s cubic-bezier(0.25, 0.46, 0.45, 0.94)`;
-            shadowEl.style.transform = `translate(${ballX}px, ${ballY}px) scale(${0.8 + progress * 0.4})`;
-
-            playSound(200 + (currentHop * 50), 'triangle', 0.05);
-            currentHop++;
-
-            if (currentHop < totalHops) {
-                setTimeout(performHop, duration * 1000);
-            } else {
-                winningIndices.push(currentIdx);
-                activeBallsFinished++;
-                if (activeBallsFinished === 3) finalizeGame();
-            }
-        };
-        performHop();
-    });
+    chargeInterval = setInterval(() => {
+        chargePower += 4.2 * chargeDirection; if (chargePower >= 100 || chargePower <= 0) chargeDirection *= -1;
+        document.getElementById('power-fill').style.width = `${chargePower}%`;
+        if (Math.random() > 0.45) emitEnergyParticle();
+    }, 30);
 }
 
-function finalizeGame() {
-    let matches = 0;
-    const wins = winningIndices.map(i => cards[i]);
-    wins.forEach(w => { if (currentBets.includes(w.id)) matches++; });
-    
+function stopCharging() {
+    if (!isCharging) return;
+    isCharging = false; clearInterval(chargeInterval);
+    if (chargingGain) chargingGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+    playSound(60, 'square', 0.3); handleLaunch(chargePower);
+    document.getElementById('power-fill').style.width = '0%';
+}
+
+function handleLaunch(power) {
+    isDrawing = true; activeBallsFinished = 0; winningIndices = [];
+    balanceTokens -= currentBets.length * betAmountPerCard; updateUI();
+    document.getElementById('results-area').innerHTML = '<span class="text-amber-500 animate-pulse font-black uppercase tracking-widest text-sm">Crystals Falling...</span>';
+    const gridEl = document.getElementById('card-grid');
+
+    for(let i=0; i<3; i++) {
+        const ball = document.getElementById(`ball-${i}`);
+        const shadow = document.getElementById(`ball-shadow-${i}`);
+        ball.style.display = 'block'; shadow.style.display = 'block';
+        const finalWinningIdx = Math.floor(Math.random() * cards.length);
+        const targetCard = document.getElementById(`card-${cards[finalWinningIdx].id}`);
+        const tx = targetCard.offsetLeft + gridEl.offsetLeft + (targetCard.offsetWidth/2) - 16;
+        const ty = targetCard.offsetTop + gridEl.offsetTop + (targetCard.offsetHeight/2) - 16;
+        
+        ball.style.transition = 'transform 2s cubic-bezier(0.1, 0.9, 0.2, 1)';
+        ball.style.transform = `translate(${tx}px, ${ty}px) translateZ(0px)`;
+        shadow.style.transition = 'transform 2s linear, opacity 2s';
+        shadow.style.transform = `translate(${tx}px, ${ty}px) scale(1)`;
+        shadow.style.opacity = 1;
+
+        setTimeout(() => {
+            winningIndices.push(finalWinningIdx); activeBallsFinished++;
+            if(activeBallsFinished === 3) finalize();
+        }, 2100);
+    }
+}
+
+function finalize() {
+    let matches = 0; let winningCardNames = [];
+    winningIndices.forEach(idx => { 
+        if(currentBets.includes(cards[idx].id)) matches++; 
+        winningCardNames.push(`${RANK_NAMES[cards[idx].rank]} of ${SUIT_NAMES[cards[idx].suit]}`);
+    });
     const payout = matches > 0 ? (matches + 1) * betAmountPerCard : 0;
-    balanceTokens += payout;
+    balanceTokens += payout; updateUI();
     
-    resultsArea.innerHTML = wins.map(w => `
-        <div class="flex flex-col items-center justify-center w-16 h-24 glass-pane rounded-xl border border-white/20 shadow-2xl animate-bounce">
-            <span class="${COLORS[w.suit]} text-xs font-bold">${w.rank}</span>
-            <span class="${COLORS[w.suit]} text-4xl">${SYMBOLS[w.suit]}</span>
+    document.getElementById('results-area').innerHTML = winningIndices.map(idx => `
+        <div class="w-16 h-20 glass-pane rounded-xl flex flex-col items-center justify-center border-2 border-amber-500 shadow-lg">
+            <span class="${COLORS[cards[idx].suit]} text-xs font-black">${cards[idx].rank}</span>
+            <span class="${COLORS[cards[idx].suit]} text-3xl">${SYMBOLS[cards[idx].suit]}</span>
         </div>
     `).join('');
 
     isDrawing = false;
-    updateUI();
-    if (matches > 0) {
-        barkerTalk(`Incredible! You won ${payout} tokens! Fortune smiles upon you.`);
-        playSound(880, 'square', 0.2);
+    if(matches > 0) {
+        const cardString = winningCardNames.slice(0, 3).join(", ");
+        barkerTalk(`THRILLING! ${cardString}! You win ${payout} Tokens!`);
+        playSound(900, 'square', 0.4); initConfetti();
     } else {
-        barkerTalk("No matches this time. Better luck in the next ritual!");
-        playSound(220, 'sawtooth', 0.3);
+        barkerTalk("No luck! The Imperial table beckons once more!");
+        playSound(180, 'sawtooth', 0.5);
     }
+}
+
+async function barkerTalk(ctx) {
+    try {
+        const res = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: `Dealer voice. Short response. Context: ${ctx}`,
+            config: { systemInstruction: "Enthusiastic carnival dealer. Max 15 words.", temperature: 0.8 }
+        });
+        if(res.text) document.getElementById('dealer-msg').innerText = `"${res.text.trim()}"`;
+    } catch(e) { document.getElementById('dealer-msg').innerText = `"Step right up! Your destiny is but a deposit away!"`; }
+}
+
+function playSound(f=440, t='sine', d=0.1) {
+    try {
+        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+        o.type = t; o.frequency.setValueAtTime(f, audioCtx.currentTime);
+        g.gain.setValueAtTime(0.04, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + d);
+        o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + d);
+    } catch(e) {}
+}
+
+function setupCursor() {
+    const cursor = document.getElementById('custom-cursor');
+    window.onmousemove = (e) => {
+        cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px';
+        cursor.classList.toggle('hovering-table', !!e.target.closest('#table-surface'));
+        cursor.classList.toggle('hovering-btn', !!e.target.closest('button, .perya-card, .item-card'));
+    };
+}
+
+function initConfetti() {
+    for(let i=0; i<30; i++) {
+        const c = document.createElement('div');
+        c.className = 'fixed pointer-events-none z-[10000] w-2 h-2 rounded-sm';
+        c.style.left = Math.random() * 100 + 'vw'; c.style.top = '-20px';
+        c.style.backgroundColor = ['#ef4444', '#fbbf24', '#fff', '#22c55e'][Math.floor(Math.random() * 4)];
+        document.body.appendChild(c);
+        c.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: `translateY(110vh) rotate(${Math.random()*720}deg)`, opacity: 0 }], { duration: 3000 }).onfinish = () => c.remove();
+    }
+}
+
+function emitEnergyParticle() {
+    const p = document.createElement('div'); p.className = 'energy-particle';
+    p.style.left = (Math.random() * window.innerWidth) + 'px';
+    p.style.top = (Math.random() * window.innerHeight) + 'px';
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 600);
 }
 
 init();
