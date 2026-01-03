@@ -70,7 +70,7 @@ let audioCtx = null;
 let chargeOscillator = null;
 let chargeGain = null;
 
-// Leaderboard Logic
+// Persistent Stats
 let stats = {
     highestWin: 0,
     imperialHits: 0
@@ -83,22 +83,42 @@ function init() {
     updateUI();
     renderShop();
     loadLeaderboard();
+    
+    // Auto-focus nickname input
+    setTimeout(() => {
+        const input = document.getElementById('nickname-input');
+        if (input) input.focus();
+    }, 500);
 }
 
 function handleNicknameEntry() {
     const input = document.getElementById('nickname-input');
+    const overlay = document.getElementById('nickname-overlay');
+    const gameCont = document.getElementById('game-container');
     const val = input.value.trim();
+
     if (val.length < 2) {
         input.classList.add('animate-shake');
         setTimeout(() => input.classList.remove('animate-shake'), 500);
         return;
     }
+
     playerName = val;
     document.getElementById('player-name-txt').innerText = playerName;
-    document.getElementById('nickname-overlay').style.display = 'none';
-    document.getElementById('game-container').style.display = 'flex';
     
-    // Resume Audio Context if possible
+    // Cool Transition: Splash fades out & scales up, Game scales in & fades in
+    overlay.classList.add('fade-out');
+    
+    setTimeout(() => {
+        overlay.style.display = 'none';
+        gameCont.style.display = 'flex';
+        // Minor delay to trigger the scale transition
+        setTimeout(() => {
+            gameCont.classList.add('visible');
+        }, 50);
+    }, 800);
+
+    // Initialize Audio
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
     
@@ -178,7 +198,6 @@ function loadLeaderboard() {
     const body = document.getElementById('leaderboard-body');
     if (!body) return;
     
-    // Mock Legendary Players + Local Save
     let leaders = JSON.parse(localStorage.getItem('perya_leaderboard')) || [
         { name: "SULTAN_OF_SPADES", win: 1500, hits: 25 },
         { name: "CARNIVAL_KING", win: 1200, hits: 18 },
@@ -187,26 +206,29 @@ function loadLeaderboard() {
         { name: "KWEK_KWEK_MASTER", win: 400, hits: 5 }
     ];
 
-    // Add current player data
+    // Update current player session data in the global pool if they exist
     const currentPlayerIdx = leaders.findIndex(l => l.name === playerName);
     if (currentPlayerIdx !== -1) {
         leaders[currentPlayerIdx].win = Math.max(leaders[currentPlayerIdx].win, stats.highestWin);
         leaders[currentPlayerIdx].hits = Math.max(leaders[currentPlayerIdx].hits, stats.imperialHits);
-    } else if (stats.highestWin > 0) {
+    } else if (stats.highestWin > 0 || stats.imperialHits > 0) {
         leaders.push({ name: playerName, win: stats.highestWin, hits: stats.imperialHits });
     }
 
-    // Sort and Save
-    leaders.sort((a, b) => b.win - a.win);
-    leaders = leaders.slice(0, 8); // Keep Top 8
+    // Sort by Highest Win, then by Imperial Hits
+    leaders.sort((a, b) => b.win - a.win || b.hits - a.hits);
+    leaders = leaders.slice(0, 10); // Keep Top 10
+    
     localStorage.setItem('perya_leaderboard', JSON.stringify(leaders));
 
     body.innerHTML = leaders.map((l, i) => `
         <tr class="leaderboard-row ${l.name === playerName ? 'bg-amber-500/10 text-amber-300' : 'text-white/80'}">
-            <td class="py-4 px-4 font-black">${i + 1}</td>
+            <td class="py-4 px-4 font-black">
+                ${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+            </td>
             <td class="py-4 px-4 font-bold tracking-widest">${l.name}</td>
-            <td class="py-4 px-4 text-amber-500 font-black">🪙 ${l.win}</td>
-            <td class="py-4 px-4 font-black">${l.hits}</td>
+            <td class="py-4 px-4 text-amber-500 font-black">🪙 ${l.win.toLocaleString()}</td>
+            <td class="py-4 px-4 font-black text-rose-400">${l.hits}</td>
         </tr>
     `).join('');
 }
@@ -214,12 +236,29 @@ function loadLeaderboard() {
 function updateStats(payout, matches) {
     if (payout > stats.highestWin) stats.highestWin = payout;
     if (matches >= 3) stats.imperialHits++;
+    
+    // Periodically update localStorage to ensure the player's best record is kept
     loadLeaderboard();
 }
 
 function setupEventListeners() {
-    document.getElementById('enter-game-btn').onclick = handleNicknameEntry;
-    document.getElementById('nickname-input').onkeydown = (e) => { if (e.code === 'Enter') handleNicknameEntry(); };
+    const nicknameInput = document.getElementById('nickname-input');
+    const enterBtn = document.getElementById('enter-game-btn');
+    const introLeaderboardBtn = document.getElementById('intro-leaderboard-btn');
+
+    if (enterBtn) enterBtn.onclick = handleNicknameEntry;
+    if (introLeaderboardBtn) {
+        introLeaderboardBtn.onclick = () => {
+            document.getElementById('leaderboard-modal').style.display = 'flex';
+            loadLeaderboard();
+        };
+    }
+    
+    if (nicknameInput) {
+        nicknameInput.onkeydown = (e) => { 
+            if (e.code === 'Enter') handleNicknameEntry(); 
+        };
+    }
 
     document.querySelectorAll('#bet-amount-selector button').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -283,10 +322,20 @@ function setupEventListeners() {
     };
 
     const drawBtn = document.getElementById('draw-btn');
-    drawBtn.addEventListener('mousedown', startCharging);
+    if (drawBtn) drawBtn.addEventListener('mousedown', startCharging);
     window.addEventListener('mouseup', stopCharging);
-    window.addEventListener('keydown', (e) => { if (e.code === 'Space') startCharging(); });
-    window.addEventListener('keyup', (e) => { if (e.code === 'Space') stopCharging(); });
+    
+    window.addEventListener('keydown', (e) => { 
+        if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+            e.preventDefault();
+            startCharging(); 
+        }
+    });
+    window.addEventListener('keyup', (e) => { 
+        if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+            stopCharging(); 
+        }
+    });
 
     window.addEventListener('buy-item', (e) => {
         const { name, price } = e.detail;
@@ -394,10 +443,13 @@ function handleLaunch() {
     for (let i = 0; i < 3; i++) {
         const ballCont = document.getElementById(`ball-container-${i}`);
         const shadowCont = document.getElementById(`shadow-container-${i}`);
-        ballCont.style.display = 'block'; shadowCont.style.display = 'block';
-        const totalBounces = Math.floor(Math.random() * 13) + 3;
-        const finalTargetIdx = Math.floor(Math.random() * cards.length);
-        animateBallJourney(i, ballCont, shadowCont, gridEl, totalBounces, finalTargetIdx);
+        if (ballCont && shadowCont) {
+            ballCont.style.display = 'block'; 
+            shadowCont.style.display = 'block';
+            const totalBounces = Math.floor(Math.random() * 13) + 3;
+            const finalTargetIdx = Math.floor(Math.random() * cards.length);
+            animateBallJourney(i, ballCont, shadowCont, gridEl, totalBounces, finalTargetIdx);
+        }
     }
 }
 
@@ -444,11 +496,16 @@ function finalize() {
         hitMap[winId] = (hitMap[winId] || 0) + 1;
         if (currentBets.includes(winId)) totalMatches++;
     });
+    
+    // Imperial Payout multipliers
     let multiplier = totalMatches === 1 ? 2 : totalMatches === 2 ? 3 : totalMatches >= 3 ? 6 : 0;
     const payout = multiplier * betAmountPerCard;
     balanceTokens += payout;
+    
+    // Track stats
     updateStats(payout, totalMatches);
     updateUI();
+    
     setTimeout(() => {
         const groupedWinningIds = [...new Set(winningIndices)];
         document.getElementById('results-area').innerHTML = groupedWinningIds.map(idx => {
@@ -461,6 +518,7 @@ function finalize() {
                 ${hits > 1 ? `<div class="absolute -top-2 -right-2 bg-rose-600 text-white text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-amber-400 shadow-lg z-50 animate-bounce">x${hits}</div>` : ''}
             </div>`;
         }).join('');
+        
         isDrawing = false;
         if (totalMatches > 0) {
             barkerTalk(`Majesty ${playerName}! You claimed ${payout} Tokens!`);
@@ -509,6 +567,8 @@ function setupCursor() {
         const target = e.target;
         cursor.classList.toggle('hovering-table', !!target.closest('#table-surface'));
         cursor.classList.toggle('hovering-btn', !!target.closest('button, .vault-pack, .payment-btn'));
+        cursor.classList.toggle('hovering-text', target.tagName === 'INPUT');
+        
         const lbl = target.closest('[data-label]')?.getAttribute('data-label') || (target.closest('#table-surface') ? "Royal Table" : "Exploring...");
         label.innerText = lbl;
     });
