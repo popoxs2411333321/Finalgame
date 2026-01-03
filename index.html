@@ -77,6 +77,23 @@
         .perya-card::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 40%, rgba(0,0,0,0.05) 100%); pointer-events: none; z-index: 10; }
         .perya-card.selected { transform: translateZ(70px) scale(1.1); z-index: 200 !important; border-color: #fbbf24; box-shadow: 0 30px 70px rgba(0,0,0,0.8), 0 0 40px rgba(251, 191, 36, 0.6), inset 0 0 20px rgba(255,255,255,0.3); }
         .perya-card:not(.selected):hover { transform: translateZ(45px) translateY(-12px) rotateY(5deg); z-index: 100 !important; border-color: var(--gold-light); animation: royale-pulse 2s infinite ease-in-out; }
+        
+        /* Subtle Loss Animation */
+        @keyframes loss-fizzle {
+            0% { transform: translateZ(70px) scale(1.1) translateX(0); }
+            20% { transform: translateZ(70px) scale(1.1) translateX(-3px); }
+            40% { transform: translateZ(70px) scale(1.1) translateX(3px); }
+            60% { transform: translateZ(70px) scale(1.1) translateX(-2px); }
+            80% { transform: translateZ(70px) scale(1.1) translateX(2px); }
+            100% { transform: translateZ(30px) scale(1) translateX(0); opacity: 0.6; }
+        }
+        .bet-loss {
+            animation: loss-fizzle 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
+            filter: grayscale(0.8) brightness(0.7);
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+        }
+
         @keyframes royale-pulse {
             0% { box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 0 0 rgba(251, 191, 36, 0); }
             50% { box-shadow: 0 25px 60px rgba(0,0,0,0.7), 0 0 30px 10px rgba(251, 191, 36, 0.4); }
@@ -131,6 +148,73 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.3);
             z-index: 10;
         }
+
+        /* News Ticker Styling */
+        #news-ticker-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 32px;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            z-index: 500;
+            border-bottom: 1px solid rgba(251, 191, 36, 0.2);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+        }
+
+        .ticker-label {
+            background: #fbbf24;
+            color: #2d0a01;
+            font-size: 10px;
+            font-weight: 900;
+            padding: 0 12px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            z-index: 10;
+            box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+        }
+
+        #news-marquee {
+            white-space: nowrap;
+            display: inline-block;
+            animation: marquee 30s linear infinite;
+            padding-left: 100%;
+            font-size: 11px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.7);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        @keyframes marquee {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(-100%, 0); }
+        }
+
+        .news-item { margin-right: 100px; display: inline-flex; align-items: center; }
+        .news-win { color: #22c55e; margin-left: 8px; font-weight: 900; }
+
+        .vault-pack {
+            background-color: #fdfcf0;
+            background-image: var(--parchment-texture);
+            border: 1px solid #d97706;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        .vault-pack:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4), 0 0 15px rgba(251, 191, 36, 0.3);
+        }
+        .vault-pack.selected {
+            border-color: #fbbf24;
+            border-width: 3px;
+            box-shadow: 0 0 25px rgba(251, 191, 36, 0.5);
+        }
     </style>
 <script type="importmap">
 {
@@ -141,6 +225,16 @@
 </script>
 </head>
 <body>
+    <div id="news-ticker-bar">
+        <div class="ticker-label">Live Fiesta News</div>
+        <div id="news-marquee">
+            <span class="news-item">Welcome to Perya Royale! Good luck to all players! 🍀</span>
+            <span class="news-item">User 'CardKing88' just won <span class="news-win">🪙 500</span> at the Ace Table!</span>
+            <span class="news-item">System Update: The Imperial Treasury has been restocked with 6 legendary bundles!</span>
+            <span class="news-item">Table 2: High Stakes Round starting in 30 seconds!</span>
+        </div>
+    </div>
+
     <div id="charge-overlay"></div>
     <div id="custom-cursor">
         <div class="cursor-glint"></div>
@@ -149,8 +243,8 @@
     </div>
     <div class="live-bg-container"><div class="rays-container"></div></div>
 
-    <div id="game-container" class="max-w-7xl w-full mx-auto relative z-10 p-4 transition-transform duration-75">
-        <button id="fullscreen-toggle" class="fixed top-4 right-4 z-[1000] bg-black/60 text-amber-400 border border-amber-500/40 px-4 py-2 rounded-xl text-sm font-bold backdrop-blur-md hover:bg-black/80">⛶ FULL SCREEN</button>
+    <div id="game-container" class="max-w-7xl w-full mx-auto relative z-10 p-8 transition-transform duration-75 pt-16">
+        <button id="fullscreen-toggle" class="fixed top-12 right-4 z-[1000] bg-black/60 text-amber-400 border border-amber-500/40 px-4 py-2 rounded-xl text-sm font-bold backdrop-blur-md hover:bg-black/80">⛶ FULL SCREEN</button>
 
         <header class="text-center mb-10">
             <h1 class="text-6xl md:text-7xl royal-title mb-2">PERYA ROYALE</h1>
@@ -212,40 +306,89 @@
 
     <!-- Modals -->
     <div id="payment-modal" class="modal">
-        <div id="payment-selection-view" class="glass-pane p-10 rounded-[3rem] max-w-3xl w-full border-2 border-amber-500/40 relative max-h-[90vh] overflow-y-auto custom-scrollbar">
-            <h2 class="text-3xl font-black text-amber-400 text-center mb-6 uppercase tracking-widest">Imperial Treasury</h2>
-            <h3 class="text-amber-500 text-[10px] font-black mb-4 uppercase tracking-[0.3em] text-center">1. Select Token Bundle</h3>
-            <div class="grid grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                <div class="vault-pack p-4 rounded-xl border border-white/10 bg-white/5 hover:border-amber-500 cursor-pointer text-center relative transition-all" data-tokens="100" data-price="50">
-                    <div class="text-xl">🪙 100</div><div class="text-amber-500 text-sm font-bold">NT$ 50</div>
+        <div id="payment-selection-view" class="glass-pane p-10 rounded-[3rem] max-w-4xl w-full border-2 border-amber-500/40 relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <h2 class="text-3xl font-black text-amber-400 text-center mb-2 uppercase tracking-widest">Imperial Treasury</h2>
+            <p class="text-white/40 text-[10px] text-center mb-8 uppercase tracking-widest">Secure token acquisition through the Royal Network</p>
+            
+            <h3 class="text-amber-500 text-[10px] font-black mb-6 uppercase tracking-[0.3em] text-center flex items-center justify-center gap-4">
+                <span class="w-12 h-px bg-amber-500/20"></span>
+                1. Select Token Bundle
+                <span class="w-12 h-px bg-amber-500/20"></span>
+            </h3>
+            
+            <div class="grid grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+                <!-- 100 Bundle -->
+                <div class="vault-pack p-6 rounded-2xl cursor-pointer text-center relative flex flex-col items-center gap-2" data-tokens="100" data-price="50">
+                    <div class="text-4xl">💰</div>
+                    <div class="text-stone-900 font-black text-xl">100</div>
+                    <div class="text-amber-700 text-xs font-bold uppercase">NT$ 50</div>
                 </div>
-                <div class="vault-pack p-4 rounded-xl border-2 border-amber-500 bg-amber-500/10 hover:bg-amber-500/20 cursor-pointer text-center relative transition-all" data-tokens="800" data-price="200">
-                    <div class="text-xl font-bold text-white">🪙 800</div><div class="text-amber-500 text-sm font-black">NT$ 200</div>
+                <!-- 800 Bundle -->
+                <div class="vault-pack p-6 rounded-2xl cursor-pointer text-center relative flex flex-col items-center gap-2" data-tokens="800" data-price="200">
+                    <div class="text-4xl">📦</div>
+                    <div class="text-stone-900 font-black text-xl">800</div>
+                    <div class="text-amber-700 text-xs font-bold uppercase">NT$ 200</div>
                     <div class="promo-badge">Popular</div>
                 </div>
-                <div class="vault-pack p-4 rounded-xl border-2 border-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20 cursor-pointer text-center relative transition-all" data-tokens="2500" data-price="500">
-                    <div class="text-xl font-bold text-white">🪙 2,500</div><div class="text-amber-500 text-sm font-black">NT$ 500</div>
+                <!-- 2500 Bundle -->
+                <div class="vault-pack p-6 rounded-2xl cursor-pointer text-center relative flex flex-col items-center gap-2" data-tokens="2500" data-price="500">
+                    <div class="text-4xl">🏛️</div>
+                    <div class="text-stone-900 font-black text-xl">2,500</div>
+                    <div class="text-amber-700 text-xs font-bold uppercase">NT$ 500</div>
                     <div class="promo-badge" style="background: #22c55e;">Best Value</div>
                 </div>
-                <div class="vault-pack p-4 rounded-xl border border-white/10 bg-white/5 hover:border-amber-500 cursor-pointer text-center relative transition-all" data-tokens="7000" data-price="1000">
-                    <div class="text-xl font-bold text-white">🪙 7,000</div><div class="text-amber-500 text-sm font-bold">NT$ 1000</div>
+                <!-- 7000 Bundle -->
+                <div class="vault-pack p-6 rounded-2xl cursor-pointer text-center relative flex flex-col items-center gap-2" data-tokens="7000" data-price="1000">
+                    <div class="text-4xl">🏰</div>
+                    <div class="text-stone-900 font-black text-xl">7,000</div>
+                    <div class="text-amber-700 text-xs font-bold uppercase">NT$ 1,000</div>
                     <div class="promo-badge" style="background: #3b82f6;">Pro Pack</div>
                 </div>
-                <div class="vault-pack p-4 rounded-xl border-2 border-amber-600 bg-amber-600/5 hover:bg-amber-600/10 cursor-pointer text-center relative transition-all" data-tokens="20000" data-price="2500">
-                    <div class="text-xl font-bold text-white">🪙 20,000</div><div class="text-amber-500 text-sm font-black">NT$ 2500</div>
-                    <div class="promo-badge" style="background: #d97706;">Royal Treasury</div>
+                <!-- 20000 Bundle -->
+                <div class="vault-pack p-6 rounded-2xl cursor-pointer text-center relative flex flex-col items-center gap-2" data-tokens="20000" data-price="2500">
+                    <div class="text-4xl">🔱</div>
+                    <div class="text-stone-900 font-black text-xl">20,000</div>
+                    <div class="text-amber-700 text-xs font-bold uppercase">NT$ 2,500</div>
+                    <div class="promo-badge" style="background: #d97706;">Grand Treasury</div>
+                </div>
+                <!-- 50000 Bundle -->
+                <div class="vault-pack p-6 rounded-2xl cursor-pointer text-center relative flex flex-col items-center gap-2" data-tokens="50000" data-price="5000">
+                    <div class="text-4xl">💎</div>
+                    <div class="text-stone-900 font-black text-xl">50,000</div>
+                    <div class="text-amber-700 text-xs font-bold uppercase">NT$ 5,000</div>
+                    <div class="promo-badge" style="background: #a855f7;">Emperor's Ransom</div>
                 </div>
             </div>
-            <h3 class="text-amber-500 text-[10px] font-black mb-4 uppercase tracking-[0.3em] text-center">2. Choose Payment Method</h3>
-            <div id="payment-methods-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-                <div class="payment-method-btn p-3 rounded-xl cursor-pointer flex flex-col items-center justify-center gap-1" data-method="linepay"><div class="text-2xl">🟢</div><div class="text-[10px] font-bold uppercase tracking-wider">Line Pay</div></div>
-                <div class="payment-method-btn p-3 rounded-xl cursor-pointer flex flex-col items-center justify-center gap-1" data-method="cash"><div class="text-2xl">💵</div><div class="text-[10px] font-bold uppercase tracking-wider">Cash / 7-11</div></div>
-                <div class="payment-method-btn p-3 rounded-xl cursor-pointer flex flex-col items-center justify-center gap-1" data-method="debit"><div class="text-2xl">💳</div><div class="text-[10px] font-bold uppercase tracking-wider">Debit Card</div></div>
-                <div class="payment-method-btn p-3 rounded-xl cursor-pointer flex flex-col items-center justify-center gap-1" data-method="credit"><div class="text-2xl">🏛️</div><div class="text-[10px] font-bold uppercase tracking-wider">Credit Card</div></div>
+
+            <h3 class="text-amber-500 text-[10px] font-black mb-6 uppercase tracking-[0.3em] text-center flex items-center justify-center gap-4">
+                <span class="w-12 h-px bg-amber-500/20"></span>
+                2. Choose Payment Method
+                <span class="w-12 h-px bg-amber-500/20"></span>
+            </h3>
+
+            <div id="payment-methods-grid" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+                <div class="payment-method-btn p-4 rounded-xl cursor-pointer flex flex-col items-center justify-center gap-2" data-method="linepay">
+                    <div class="text-3xl">🟢</div>
+                    <div class="text-[10px] font-bold uppercase tracking-wider text-white">Line Pay</div>
+                </div>
+                <div class="payment-method-btn p-4 rounded-xl cursor-pointer flex flex-col items-center justify-center gap-2" data-method="cash">
+                    <div class="text-3xl">💵</div>
+                    <div class="text-[10px] font-bold uppercase tracking-wider text-white">Cash / 7-11</div>
+                </div>
+                <div class="payment-method-btn p-4 rounded-xl cursor-pointer flex flex-col items-center justify-center gap-2" data-method="debit">
+                    <div class="text-3xl">💳</div>
+                    <div class="text-[10px] font-bold uppercase tracking-wider text-white">Debit Card</div>
+                </div>
+                <div class="payment-method-btn p-4 rounded-xl cursor-pointer flex flex-col items-center justify-center gap-2" data-method="credit">
+                    <div class="text-3xl">🏛️</div>
+                    <div class="text-[10px] font-bold uppercase tracking-wider text-white">Credit Card</div>
+                </div>
             </div>
-            <button id="complete-purchase" class="w-full py-4 bg-amber-500 text-stone-900 font-bold rounded-xl uppercase opacity-50 cursor-not-allowed transition-all" disabled>Complete Transaction</button>
-            <button class="close-modal absolute top-4 right-4 text-2xl">×</button>
+
+            <button id="complete-purchase" class="w-full py-5 bg-amber-500 text-stone-900 font-black rounded-2xl uppercase tracking-[0.2em] opacity-50 cursor-not-allowed transition-all shadow-xl hover:scale-[1.01] active:scale-[0.99]" disabled>Authorize Funds</button>
+            <button class="close-modal absolute top-6 right-6 text-3xl opacity-50 hover:opacity-100">×</button>
         </div>
+        
         <div id="payment-scanning-view" class="rounded-[3rem] max-w-lg w-full p-10 relative">
             <h3 class="text-2xl font-black text-amber-400 text-center mb-2 uppercase tracking-widest" id="scanning-title">Secure Scan</h3>
             <p class="text-white/60 text-xs text-center mb-8 uppercase tracking-widest" id="scanning-subtitle">Please scan the QR code to proceed</p>

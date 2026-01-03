@@ -335,6 +335,10 @@ function handleCardClick(id) {
     if (idx !== -1) currentBets.splice(idx, 1);
     else if (currentBets.length < MAX_BETS) currentBets.push(id);
     playSound(idx !== -1 ? 440 : 660);
+    
+    // Clear any previous round loss animations on click
+    document.querySelectorAll('.perya-card').forEach(el => el.classList.remove('bet-loss'));
+    
     updateUI();
 }
 
@@ -356,6 +360,10 @@ function startCharging() {
     if (isDrawing || currentBets.length === 0 || isCharging || !hasToppedUp) return;
     if (balanceTokens < (currentBets.length * betAmountPerCard)) return;
     isCharging = true; chargePower = 0; chargeDirection = 1;
+    
+    // Clear previous round artifacts
+    document.querySelectorAll('.perya-card').forEach(el => el.classList.remove('bet-loss'));
+    
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     chargingGain = audioCtx.createGain(); chargingGain.gain.setValueAtTime(0, audioCtx.currentTime);
     chargingGain.gain.linearRampToValueAtTime(0.08, audioCtx.currentTime + 0.1);
@@ -382,6 +390,9 @@ function handleLaunch(power) {
     document.getElementById('results-area').innerHTML = '<span class="text-amber-500 animate-pulse font-black uppercase tracking-widest text-sm">Crystals Falling...</span>';
     const gridEl = document.getElementById('card-grid');
 
+    // Clear previous round visual states
+    document.querySelectorAll('.perya-card').forEach(el => el.classList.remove('bet-loss'));
+
     for(let i=0; i<3; i++) {
         const ball = document.getElementById(`ball-${i}`);
         const shadow = document.getElementById(`ball-shadow-${i}`);
@@ -406,10 +417,21 @@ function handleLaunch(power) {
 
 function finalize() {
     let matches = 0; let winningCardNames = [];
+    const winningIds = winningIndices.map(idx => cards[idx].id);
+    
     winningIndices.forEach(idx => { 
         if(currentBets.includes(cards[idx].id)) matches++; 
         winningCardNames.push(`${RANK_NAMES[cards[idx].rank]} of ${SUIT_NAMES[cards[idx].suit]}`);
     });
+    
+    // Animate losing bets
+    currentBets.forEach(betId => {
+        if (!winningIds.includes(betId)) {
+            const el = document.getElementById(`card-${betId}`);
+            if (el) el.classList.add('bet-loss');
+        }
+    });
+    
     const payout = matches > 0 ? (matches + 1) * betAmountPerCard : 0;
     balanceTokens += payout; updateUI();
     
