@@ -12,9 +12,9 @@ const MAX_BETS = 3;
 const SUITS = ['HEARTS', 'SPADES', 'DIAMONDS'];
 const RANKS = ['J', 'Q', 'K', 'A'];
 const SYMBOLS = { HEARTS: '♥', SPADES: '♠', DIAMONDS: '♦' };
-const RANK_NAMES = { J: 'Jack', Q: 'Queen', K: 'King', A: 'Ace' };
-const SUIT_NAMES = { HEARTS: 'Hearts', SPADES: 'Spades', DIAMONDS: 'Diamonds' };
-const COLORS = { HEARTS: 'text-red-700', SPADES: 'text-stone-900', DIAMONDS: 'text-red-500' };
+const RANK_NAMES = { J: 'JACK', Q: 'QUEEN', K: 'KING', A: 'ACE' };
+const SUIT_NAMES = { HEARTS: 'HEARTS', SPADES: 'SPADES', DIAMONDS: 'DIAMONDS' };
+const COLORS = { HEARTS: 'suit-ruby', SPADES: 'suit-onyx', DIAMONDS: 'suit-ruby' };
 
 const SHOP_DATA = {
     Foods: [
@@ -65,16 +65,11 @@ let winningIndices = [];
 let activeBallsFinished = 0;
 let selectedPack = null;
 let selectedPaymentMethod = null;
-let currentShopCategory = 'Foods';
 let audioCtx = null;
 let chargeOscillator = null;
 let chargeGain = null;
-
-// Persistent Stats
-let stats = {
-    highestWin: 0,
-    imperialHits: 0
-};
+let currentShopCategory = 'Foods';
+let currentRound = 1;
 
 function init() {
     setupCards();
@@ -82,55 +77,77 @@ function init() {
     setupCursor();
     updateUI();
     renderShop();
+    renderRegistryChips();
     loadLeaderboard();
     
-    // Auto-focus nickname input
     setTimeout(() => {
         const input = document.getElementById('nickname-input');
         if (input) input.focus();
     }, 500);
 }
 
-function handleNicknameEntry() {
+function handleNicknameEntry(explicitName = null) {
     const input = document.getElementById('nickname-input');
     const overlay = document.getElementById('nickname-overlay');
     const gameCont = document.getElementById('game-container');
-    const val = input.value.trim();
-
-    if (val.length < 2) {
-        input.classList.add('animate-shake');
-        setTimeout(() => input.classList.remove('animate-shake'), 500);
-        return;
-    }
-
-    playerName = val;
-    document.getElementById('player-name-txt').innerText = playerName;
+    const val = explicitName || input.value.trim();
     
-    // Cool Transition: Splash fades out & scales up, Game scales in & fades in
+    if (val.length < 2) return;
+    
+    playerName = val;
+    saveToRegistry(playerName); 
+    
+    document.getElementById('player-name-txt').innerText = playerName;
     overlay.classList.add('fade-out');
     
     setTimeout(() => {
         overlay.style.display = 'none';
         gameCont.style.display = 'flex';
-        // Minor delay to trigger the scale transition
-        setTimeout(() => {
-            gameCont.classList.add('visible');
-        }, 50);
+        setTimeout(() => gameCont.classList.add('visible'), 50);
     }, 800);
-
-    // Initialize Audio
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
     
-    barkerTalk(`Greeting ${playerName} to the Imperial Table.`);
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    barkerTalk(`Greeting Majesty ${playerName} to the table.`);
     playSound(880, 'square', 0.2);
+}
+
+function saveToRegistry(name) {
+    let registry = JSON.parse(localStorage.getItem('perya_monarch_registry') || '[]');
+    registry = registry.filter(n => n.toLowerCase() !== name.toLowerCase());
+    registry.unshift(name);
+    if (registry.length > 10) registry = registry.slice(0, 10);
+    localStorage.setItem('perya_monarch_registry', JSON.stringify(registry));
+}
+
+function renderRegistryChips() {
+    const container = document.getElementById('recent-players-chips');
+    if (!container) return;
+    
+    const registry = JSON.parse(localStorage.getItem('perya_monarch_registry') || '[]');
+    container.innerHTML = '';
+    
+    registry.forEach(name => {
+        const chip = document.createElement('button');
+        chip.className = 'registry-chip';
+        chip.innerText = name;
+        chip.onclick = () => {
+            document.getElementById('nickname-input').value = name;
+            handleNicknameEntry(name);
+        };
+        container.appendChild(chip);
+    });
 }
 
 function setupCards() {
     cards = [];
     SUITS.forEach(suit => {
         RANKS.forEach(rank => {
-            cards.push({ id: `${suit}-${rank}`, suit, rank });
+            cards.push({ 
+                id: `${suit}-${rank}`, 
+                suit, 
+                rank,
+                fullName: `${RANK_NAMES[rank]} OF ${SUIT_NAMES[suit]}`
+            });
         });
     });
     renderCards();
@@ -142,232 +159,40 @@ function renderCards() {
     grid.innerHTML = '';
     cards.forEach(card => {
         const btn = document.createElement('button');
-        btn.className = 'perya-card';
+        btn.className = 'perya-card group';
         btn.id = `card-${card.id}`;
-        btn.setAttribute('data-label', card.rank + SYMBOLS[card.suit]);
-        btn.onclick = (e) => { e.stopPropagation(); handleCardClick(card.id); };
-        
-        btn.onmouseenter = () => {
-            if (!isDrawing) {
-                const banner = document.getElementById('active-card-banner');
-                const info = `${RANK_NAMES[card.rank]} OF ${SUIT_NAMES[card.suit]}`;
-                if (banner) banner.innerText = info;
-            }
-        };
-
+        btn.onclick = () => handleCardClick(card.id);
         btn.innerHTML = `
-            <div class="absolute top-1 left-1 font-black ${COLORS[card.suit]} text-[10px] pointer-events-none tracking-tighter z-20">${card.rank}</div>
-            <div class="card-symbol-glow ${COLORS[card.suit]} text-3xl pointer-events-none select-none z-20">${SYMBOLS[card.suit]}</div>
-            <div class="absolute bottom-1 right-1 font-black rotate-180 ${COLORS[card.suit]} text-[10px] pointer-events-none tracking-tighter z-20">${card.rank}</div>
+            <div class="card-ornate-corner corner-tl"></div><div class="card-ornate-corner corner-tr"></div>
+            <div class="card-ornate-corner corner-bl"></div><div class="card-ornate-corner corner-br"></div>
+            <div class="absolute top-2.5 left-2.5 font-black ${COLORS[card.suit]} text-[11px] pointer-events-none">${card.rank}</div>
+            <div class="card-symbol-glow ${COLORS[card.suit]} text-5xl pointer-events-none">${SYMBOLS[card.suit]}</div>
+            <div class="absolute bottom-2.5 right-2.5 font-black rotate-180 ${COLORS[card.suit]} text-[11px] pointer-events-none">${card.rank}</div>
         `;
         grid.appendChild(btn);
     });
-
+    
     const ballLayer = document.getElementById('ball-layer');
-    if (ballLayer) {
-        ballLayer.innerHTML = '';
-        for (let i = 0; i < 3; i++) {
-            const shadowCont = document.createElement('div');
-            shadowCont.id = `shadow-container-${i}`;
-            shadowCont.className = 'shadow-container';
-            shadowCont.innerHTML = `<div class="ball-shadow"></div>`;
-            const ballCont = document.createElement('div');
-            ballCont.id = `ball-container-${i}`;
-            ballCont.className = 'ball-container';
-            ballCont.innerHTML = `<div class="selection-ball"></div>`;
-            ballLayer.appendChild(shadowCont);
-            ballLayer.appendChild(ballCont);
-        }
-    }
-}
-
-function renderShop() {
-    const grid = document.getElementById('shop-grid');
-    if (!grid) return;
-    const items = SHOP_DATA[currentShopCategory];
-    grid.innerHTML = items.map(item => `
-        <div class="glass-pane p-4 rounded-xl text-center cursor-pointer hover:border-amber-500 transition-all hover:scale-105 flex flex-col items-center justify-between min-h-[140px]" onclick="buyItem('${item.name}', ${item.price}, '${item.icon}')" data-label="Buy ${item.name}">
-            <div class="text-4xl mb-2">${item.icon}</div>
-            <div class="text-white font-black text-[9px] uppercase leading-tight px-1">${item.name}</div>
-            <div class="text-amber-500 text-[11px] font-black mt-2 bg-amber-500/10 px-2 py-1 rounded-lg w-full">🪙 ${item.price}</div>
-        </div>
-    `).join('');
-}
-
-function loadLeaderboard() {
-    const body = document.getElementById('leaderboard-body');
-    if (!body) return;
-    
-    let leaders = JSON.parse(localStorage.getItem('perya_leaderboard')) || [
-        { name: "SULTAN_OF_SPADES", win: 1500, hits: 25 },
-        { name: "CARNIVAL_KING", win: 1200, hits: 18 },
-        { name: "FIESTA_QUEEN", win: 900, hits: 12 },
-        { name: "LUCKY_JUAN", win: 600, hits: 8 },
-        { name: "KWEK_KWEK_MASTER", win: 400, hits: 5 }
-    ];
-
-    // Update current player session data in the global pool if they exist
-    const currentPlayerIdx = leaders.findIndex(l => l.name === playerName);
-    if (currentPlayerIdx !== -1) {
-        leaders[currentPlayerIdx].win = Math.max(leaders[currentPlayerIdx].win, stats.highestWin);
-        leaders[currentPlayerIdx].hits = Math.max(leaders[currentPlayerIdx].hits, stats.imperialHits);
-    } else if (stats.highestWin > 0 || stats.imperialHits > 0) {
-        leaders.push({ name: playerName, win: stats.highestWin, hits: stats.imperialHits });
-    }
-
-    // Sort by Highest Win, then by Imperial Hits
-    leaders.sort((a, b) => b.win - a.win || b.hits - a.hits);
-    leaders = leaders.slice(0, 10); // Keep Top 10
-    
-    localStorage.setItem('perya_leaderboard', JSON.stringify(leaders));
-
-    body.innerHTML = leaders.map((l, i) => `
-        <tr class="leaderboard-row ${l.name === playerName ? 'bg-amber-500/10 text-amber-300' : 'text-white/80'}">
-            <td class="py-4 px-4 font-black">
-                ${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
-            </td>
-            <td class="py-4 px-4 font-bold tracking-widest">${l.name}</td>
-            <td class="py-4 px-4 text-amber-500 font-black">🪙 ${l.win.toLocaleString()}</td>
-            <td class="py-4 px-4 font-black text-rose-400">${l.hits}</td>
-        </tr>
-    `).join('');
-}
-
-function updateStats(payout, matches) {
-    if (payout > stats.highestWin) stats.highestWin = payout;
-    if (matches >= 3) stats.imperialHits++;
-    
-    // Periodically update localStorage to ensure the player's best record is kept
-    loadLeaderboard();
-}
-
-function setupEventListeners() {
-    const nicknameInput = document.getElementById('nickname-input');
-    const enterBtn = document.getElementById('enter-game-btn');
-    const introLeaderboardBtn = document.getElementById('intro-leaderboard-btn');
-
-    if (enterBtn) enterBtn.onclick = handleNicknameEntry;
-    if (introLeaderboardBtn) {
-        introLeaderboardBtn.onclick = () => {
-            document.getElementById('leaderboard-modal').style.display = 'flex';
-            loadLeaderboard();
-        };
-    }
-    
-    if (nicknameInput) {
-        nicknameInput.onkeydown = (e) => { 
-            if (e.code === 'Enter') handleNicknameEntry(); 
-        };
-    }
-
-    document.querySelectorAll('#bet-amount-selector button').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (isDrawing) return;
-            betAmountPerCard = parseInt(btn.dataset.amount || '10');
-            document.querySelectorAll('#bet-amount-selector button').forEach(b => {
-                b.className = 'w-12 h-12 rounded-xl bg-stone-900 text-amber-500 border border-amber-500/30 font-black text-xs hover:bg-stone-800 transition-colors';
-            });
-            btn.className = 'w-12 h-12 rounded-xl bg-amber-500 text-stone-900 font-black text-xs active shadow-lg scale-110 transition-transform';
-            playSound(440, 'sine', 0.1);
-        });
-    });
-
-    document.getElementById('refill-btn').onclick = () => { document.getElementById('payment-modal').style.display = 'flex'; };
-    document.getElementById('rules-toggle-btn').onclick = () => { document.getElementById('rules-modal').style.display = 'flex'; };
-    document.getElementById('shop-toggle-btn').onclick = () => { document.getElementById('shop-modal').style.display = 'flex'; renderShop(); };
-    document.getElementById('leaderboard-toggle-btn').onclick = () => { document.getElementById('leaderboard-modal').style.display = 'flex'; loadLeaderboard(); };
-    document.getElementById('fullscreen-btn').onclick = toggleFullScreen;
-
-    document.querySelectorAll('.close-modal').forEach(btn => {
-        btn.onclick = () => btn.closest('.modal').style.display = 'none';
-    });
-
-    document.querySelectorAll('.shop-tab-btn').forEach(btn => {
-        btn.onclick = () => {
-            currentShopCategory = btn.dataset.shopCat;
-            document.querySelectorAll('.shop-tab-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            renderShop();
-            playSound(660, 'sine', 0.05);
-        };
-    });
-
-    document.querySelectorAll('.vault-pack').forEach(pack => {
-        pack.onclick = () => {
-            selectedPack = { tokens: parseInt(pack.dataset.tokens || '0') };
-            document.querySelectorAll('.vault-pack').forEach(p => p.classList.remove('border-amber-500', 'bg-amber-500/10'));
-            pack.classList.add('border-amber-500', 'bg-amber-500/10');
-            playSound(660);
-            validateRefill();
-        };
-    });
-
-    document.querySelectorAll('.payment-btn').forEach(btn => {
-        btn.onclick = () => {
-            selectedPaymentMethod = btn.dataset.method;
-            document.querySelectorAll('.payment-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            playSound(550);
-            validateRefill();
-        }
-    });
-
-    document.getElementById('complete-purchase').onclick = () => {
-        balanceTokens += (selectedPack?.tokens || 0);
-        hasToppedUp = true;
-        updateUI();
-        document.getElementById('payment-modal').style.display = 'none';
-        barkerTalk(`Deposit complete! Majesty ${playerName}, Tokens added.`);
-        playSound(880, 'square', 0.5);
-    };
-
-    const drawBtn = document.getElementById('draw-btn');
-    if (drawBtn) drawBtn.addEventListener('mousedown', startCharging);
-    window.addEventListener('mouseup', stopCharging);
-    
-    window.addEventListener('keydown', (e) => { 
-        if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
-            e.preventDefault();
-            startCharging(); 
-        }
-    });
-    window.addEventListener('keyup', (e) => { 
-        if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
-            stopCharging(); 
-        }
-    });
-
-    window.addEventListener('buy-item', (e) => {
-        const { name, price } = e.detail;
-        if (balanceTokens >= price) {
-            balanceTokens -= price;
-            updateUI();
-            barkerTalk(`An excellent choice, Majesty! ${name} is yours.`);
-            playSound(880, 'square', 0.5);
-            alert(`You acquired: ${name}!`);
-        } else {
-            playSound(110, 'sawtooth', 0.5);
-            alert("Insufficient tokens!");
-        }
-    });
-}
-
-function validateRefill() {
-    const completeBtn = document.getElementById('complete-purchase');
-    if (selectedPack && selectedPaymentMethod) {
-        completeBtn.disabled = false;
-        completeBtn.classList.remove('opacity-50');
-    } else {
-        completeBtn.disabled = true;
-        completeBtn.classList.add('opacity-50');
-    }
-}
-
-function toggleFullScreen() {
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(err => { console.error(err.message); });
-    } else {
-        if (document.exitFullscreen) document.exitFullscreen();
+    ballLayer.innerHTML = '';
+    for (let i = 0; i < 3; i++) {
+        const shadow = document.createElement('div');
+        shadow.id = `shadow-${i}`;
+        shadow.className = 'absolute opacity-0 transition-opacity duration-300';
+        shadow.style.width = '28px'; shadow.style.height = '28px';
+        shadow.innerHTML = `<div class="w-full h-full bg-black/50 blur-lg rounded-full"></div>`;
+        
+        const ball = document.createElement('div');
+        ball.id = `ball-${i}`;
+        ball.className = 'absolute opacity-0 z-[1000] transition-opacity duration-300';
+        ball.style.width = '26px'; ball.style.height = '26px';
+        ball.innerHTML = `
+            <div class="w-full h-full bg-gradient-to-br from-white via-yellow-200 to-amber-500 rounded-full 
+            shadow-[0_0_20px_rgba(251,191,36,1),inset_0_4px_8px_rgba(255,255,255,1)] flex items-center justify-center">
+                <div class="w-1/2 h-1/2 bg-white/30 rounded-full blur-[1px]"></div>
+            </div>`;
+        
+        ballLayer.appendChild(shadow);
+        ballLayer.appendChild(ball);
     }
 }
 
@@ -376,20 +201,23 @@ function handleCardClick(id) {
     const idx = currentBets.indexOf(id);
     if (idx !== -1) currentBets.splice(idx, 1);
     else if (currentBets.length < MAX_BETS) currentBets.push(id);
-    document.querySelectorAll('.perya-card').forEach(el => el.classList.remove('bet-loss'));
     updateUI();
-    playSound(idx !== -1 ? 330 : 660, 'sine', 0.05);
+    playSound(idx !== -1 ? 300 : 700, 'sine', 0.08);
 }
 
 function updateUI() {
-    const balEl = document.getElementById('balance-txt'); if (balEl) balEl.innerText = balanceTokens.toLocaleString();
-    const countEl = document.getElementById('bet-count-txt'); if (countEl) countEl.innerText = `${currentBets.length} / ${MAX_BETS}`;
+    document.getElementById('balance-txt').innerText = balanceTokens.toLocaleString();
+    document.getElementById('bet-count-txt').innerText = `${currentBets.length} / ${MAX_BETS}`;
     const drawBtn = document.getElementById('draw-btn');
     const isLocked = !hasToppedUp;
-    if (drawBtn) {
-        drawBtn.disabled = isDrawing || currentBets.length === 0 || balanceTokens < (currentBets.length * betAmountPerCard) || isLocked;
-        drawBtn.innerText = isLocked ? "DEPOSIT REQUIRED" : (isDrawing ? "DROPPING..." : "HOLD SPACE");
-    }
+    drawBtn.disabled = isDrawing || currentBets.length === 0 || balanceTokens < (currentBets.length * betAmountPerCard) || isLocked;
+    
+    let btnText = "HOLD SPACE";
+    if (isLocked) btnText = "DEPOSIT FIRST";
+    else if (isDrawing) btnText = "DROPPING...";
+    else if (currentRound > 1) btnText = `ROUND ${currentRound}: HOLD SPACE`;
+    
+    drawBtn.innerText = btnText;
     cards.forEach(c => {
         const el = document.getElementById(`card-${c.id}`);
         if (el) el.classList.toggle('selected', currentBets.includes(c.id));
@@ -398,29 +226,30 @@ function updateUI() {
 
 function startCharging() {
     if (isDrawing || currentBets.length === 0 || isCharging || !hasToppedUp) return;
-    if (balanceTokens < (currentBets.length * betAmountPerCard)) return;
     isCharging = true; chargePower = 0; chargeDirection = 1;
-    document.getElementById('draw-btn').classList.add('power-pulse');
     if (audioCtx) {
         chargeOscillator = audioCtx.createOscillator();
         chargeGain = audioCtx.createGain();
         chargeOscillator.type = 'sawtooth';
         chargeOscillator.frequency.setValueAtTime(120, audioCtx.currentTime);
-        chargeGain.gain.setValueAtTime(0, audioCtx.currentTime);
-        chargeGain.gain.linearRampToValueAtTime(0.06, audioCtx.currentTime + 0.1);
-        chargeOscillator.connect(chargeGain); chargeGain.connect(audioCtx.destination);
+        chargeGain.gain.setValueAtTime(0.015, audioCtx.currentTime);
+        chargeOscillator.connect(chargeGain);
+        chargeGain.connect(audioCtx.destination);
         chargeOscillator.start();
     }
+    document.getElementById('draw-btn').classList.add('scale-95', 'brightness-110');
     chargeLoop();
 }
 
 function chargeLoop() {
     if (!isCharging) return;
-    chargePower += 1.8 * chargeDirection;
+    chargePower += 3 * chargeDirection;
     if (chargePower >= 100) { chargePower = 100; chargeDirection = -1; }
     if (chargePower <= 0) { chargePower = 0; chargeDirection = 1; }
     document.getElementById('power-fill').style.width = `${chargePower}%`;
-    if (chargeOscillator) chargeOscillator.frequency.setTargetAtTime(120 + (chargePower * 5), audioCtx.currentTime, 0.05);
+    if (chargeOscillator) {
+        chargeOscillator.frequency.setTargetAtTime(120 + (chargePower * 5), audioCtx.currentTime, 0.04);
+    }
     chargeAnimId = requestAnimationFrame(chargeLoop);
 }
 
@@ -429,128 +258,155 @@ function stopCharging() {
     isCharging = false;
     cancelAnimationFrame(chargeAnimId);
     if (chargeOscillator) {
-        chargeGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
-        setTimeout(() => { chargeOscillator.stop(); chargeOscillator.disconnect(); }, 100);
+        chargeOscillator.stop(); chargeOscillator.disconnect();
+        chargeOscillator = null;
     }
+    document.getElementById('draw-btn').classList.remove('scale-95', 'brightness-110');
     handleLaunch();
     document.getElementById('power-fill').style.width = '0%';
 }
 
-function handleLaunch() {
-    isDrawing = true; activeBallsFinished = 0; winningIndices = [];
-    balanceTokens -= currentBets.length * betAmountPerCard; updateUI();
-    const gridEl = document.getElementById('card-grid');
-    for (let i = 0; i < 3; i++) {
-        const ballCont = document.getElementById(`ball-container-${i}`);
-        const shadowCont = document.getElementById(`shadow-container-${i}`);
-        if (ballCont && shadowCont) {
-            ballCont.style.display = 'block'; 
-            shadowCont.style.display = 'block';
-            const totalBounces = Math.floor(Math.random() * 13) + 3;
-            const finalTargetIdx = Math.floor(Math.random() * cards.length);
-            animateBallJourney(i, ballCont, shadowCont, gridEl, totalBounces, finalTargetIdx);
-        }
-    }
-}
-
-function animateBallJourney(ballIdx, ballEl, shadowEl, gridEl, remainingBounces, finalIdx) {
-    const targetIdx = remainingBounces > 1 ? Math.floor(Math.random() * cards.length) : finalIdx;
-    const targetCard = document.getElementById(`card-${cards[targetIdx].id}`);
-    let tx = targetCard.offsetLeft + gridEl.offsetLeft + (targetCard.offsetWidth / 2) - 10;
-    let ty = targetCard.offsetTop + gridEl.offsetTop + (targetCard.offsetHeight / 2) - 10;
-    if (remainingBounces === 1) { tx += (Math.random() - 0.5) * 12; ty += (Math.random() - 0.5) * 12; }
-    const jumpDuration = 200 + Math.random() * 300;
-    const jumpHeight = remainingBounces > 1 ? (40 + Math.random() * 80) : 0;
-    if (ballEl.style.display === 'block' && !ballEl.getAttribute('data-active')) {
-        ballEl.setAttribute('data-active', 'true');
-        ballEl.style.transform = `translate(${tx}px, -600px) translateZ(200px)`;
-    }
-    shadowEl.style.transition = `transform ${jumpDuration}ms cubic-bezier(0.1, 0, 0.5, 1), opacity ${jumpDuration}ms ease-in`;
-    shadowEl.style.transform = `translate(${tx}px, ${ty}px) scale(1)`;
-    shadowEl.style.opacity = '0.5';
-    const anim = ballEl.animate([
-        { transform: ballEl.style.transform },
-        { transform: `translate(${tx}px, ${ty}px) translateZ(${jumpHeight}px)`, offset: 0.5 },
-        { transform: `translate(${tx}px, ${ty}px) translateZ(0px)` }
-    ], { duration: jumpDuration, easing: 'linear' });
-    anim.onfinish = () => {
-        playSound(180 + (ballIdx * 80) + (remainingBounces * 15), 'triangle', 0.12);
-        ballEl.style.transform = `translate(${tx}px, ${ty}px) translateZ(0px)`;
-        if (remainingBounces > 1) {
-            setTimeout(() => animateBallJourney(ballIdx, ballEl, shadowEl, gridEl, remainingBounces - 1, finalIdx), 40);
-        } else {
-            winningIndices.push(finalIdx);
-            activeBallsFinished++;
-            ballEl.classList.add('bouncing'); shadowEl.classList.add('bouncing');
-            ballEl.removeAttribute('data-active');
-            if (activeBallsFinished === 3) finalize();
-        }
+/**
+ * Robust target coordinate calculation relative to the ball layer.
+ * This ensures balls land perfectly even in Fullscreen or scaled layouts.
+ */
+function getTargetCoords(targetId) {
+    const layer = document.getElementById('ball-layer');
+    const card = document.getElementById(`card-${targetId}`);
+    if (!layer || !card) return { x: 0, y: 0 };
+    
+    const layerRect = layer.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    
+    // Scale-aware relative coordinates
+    return {
+        x: (cardRect.left - layerRect.left) + (cardRect.width / 2) - 13,
+        y: (cardRect.top - layerRect.top) + (cardRect.height / 2) - 13
     };
 }
 
-function finalize() {
-    let totalMatches = 0;
-    const hitMap = {};
-    winningIndices.forEach(winIdx => {
-        const winId = cards[winIdx].id;
-        hitMap[winId] = (hitMap[winId] || 0) + 1;
-        if (currentBets.includes(winId)) totalMatches++;
-    });
-    
-    // Imperial Payout multipliers
-    let multiplier = totalMatches === 1 ? 2 : totalMatches === 2 ? 3 : totalMatches >= 3 ? 6 : 0;
-    const payout = multiplier * betAmountPerCard;
-    balanceTokens += payout;
-    
-    // Track stats
-    updateStats(payout, totalMatches);
-    updateUI();
-    
-    setTimeout(() => {
-        const groupedWinningIds = [...new Set(winningIndices)];
-        document.getElementById('results-area').innerHTML = groupedWinningIds.map(idx => {
-            const hits = hitMap[cards[idx].id];
-            return `<div class="relative group">
-                <div class="w-12 h-16 perya-card flex flex-col items-center justify-center border border-amber-500/40 shadow-xl transition-all !animation-none">
-                    <span class="${COLORS[cards[idx].suit]} text-[9px] font-black z-20">${cards[idx].rank}</span>
-                    <span class="${COLORS[cards[idx].suit]} text-2xl card-symbol-glow z-20">${SYMBOLS[cards[idx].suit]}</span>
-                </div>
-                ${hits > 1 ? `<div class="absolute -top-2 -right-2 bg-rose-600 text-white text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-amber-400 shadow-lg z-50 animate-bounce">x${hits}</div>` : ''}
-            </div>`;
-        }).join('');
-        
-        isDrawing = false;
-        if (totalMatches > 0) {
-            barkerTalk(`Majesty ${playerName}! You claimed ${payout} Tokens!`);
-            initConfetti(); playSound(880, 'square', 0.4);
-        } else {
-            barkerTalk("No luck! The crystals have spoken. Try again?");
-            playSound(150, 'sawtooth', 0.5);
-            currentBets.forEach(betId => document.getElementById(`card-${betId}`)?.classList.add('bet-loss'));
-        }
-    }, 1000);
-}
+function handleLaunch() {
+    isDrawing = true; activeBallsFinished = 0; winningIndices = [];
+    document.querySelectorAll('.perya-card').forEach(el => el.classList.remove('winning-hit'));
+    document.getElementById('winning-cards-list').innerHTML = '';
+    balanceTokens -= currentBets.length * betAmountPerCard; updateUI();
 
-async function barkerTalk(ctx) {
-    if (!process.env.API_KEY) return;
-    try {
-        const res = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: `The game dealer is speaking. Max 8 words. Context: ${ctx}`,
-            config: { systemInstruction: "Enthusiastic carnival barker addressing a royal player.", temperature: 1.0 }
-        });
-        if (res.text) document.getElementById('dealer-msg').innerText = `"${res.text.trim()}"`;
-    } catch (e) {
-        document.getElementById('dealer-msg').innerText = `"Step right up! Your fortune awaits!"`;
+    for (let i = 0; i < 3; i++) {
+        const ball = document.getElementById(`ball-${i}`);
+        const shadow = document.getElementById(`shadow-${i}`);
+        
+        const startIdx = Math.floor(Math.random() * cards.length);
+        const { x, y } = getTargetCoords(cards[startIdx].id);
+        
+        ball.style.transform = `translate(${x}px, ${y}px)`;
+        shadow.style.transform = `translate(${x}px, ${y}px)`;
+        ball.style.opacity = '1'; shadow.style.opacity = '1';
+        
+        const finalIdx = Math.floor(Math.random() * cards.length);
+        const hops = 3 + Math.floor(Math.random() * 13);
+        
+        setTimeout(() => {
+            animateBall(i, ball, shadow, hops, finalIdx, hops, startIdx);
+        }, i * 180);
     }
 }
 
-function playSound(f = 440, t = 'sine', d = 0.1) {
+function animateBall(idx, ball, shadow, bouncesLeft, finalIdx, totalBounces, currentIdx) {
+    const targetIdx = bouncesLeft > 0 ? Math.floor(Math.random() * cards.length) : finalIdx;
+    const { x: tx, y: ty } = getTargetCoords(cards[targetIdx].id);
+    
+    const progress = 1 - (bouncesLeft / totalBounces);
+    const speedVariation = 0.7 + (Math.random() * 0.6);
+    const baseDuration = 160 - (chargePower / 3);
+    const duration = (baseDuration + (progress * 260)) * speedVariation;
+    
+    const heightVariation = 0.9 + (Math.random() * 0.25);
+    const initialJump = -100 - (chargePower / 2.2);
+    const jumpHeight = bouncesLeft > 0 ? (initialJump * (1 - (progress * 0.92))) * heightVariation : 0;
+
+    const currentPos = ball.style.transform;
+
+    const ballAnim = ball.animate([
+        { transform: currentPos, easing: 'ease-out' },
+        { transform: `translate(${tx}px, ${ty + jumpHeight}px)`, offset: 0.5, easing: 'ease-in' },
+        { transform: `translate(${tx}px, ${ty}px)` }
+    ], { duration });
+
+    ballAnim.onfinish = () => {
+        playSound(220 + (bouncesLeft * 45), 'triangle', 0.04);
+        ball.style.transform = `translate(${tx}px, ${ty}px)`;
+        
+        if (bouncesLeft > 0) {
+            animateBall(idx, ball, shadow, bouncesLeft - 1, finalIdx, totalBounces, targetIdx);
+        } else {
+            winningIndices.push(finalIdx); 
+            activeBallsFinished++;
+            if (activeBallsFinished === 3) finalize();
+        }
+    };
+
+    shadow.animate([
+        { transform: shadow.style.transform, opacity: 0.3 },
+        { transform: `translate(${tx}px, ${ty}px)`, opacity: 0.5 }
+    ], { duration, easing: 'linear' });
+    shadow.style.transform = `translate(${tx}px, ${ty}px)`;
+}
+
+function finalize() {
+    let matches = 0;
+    const listContainer = document.getElementById('winning-cards-list');
+    listContainer.innerHTML = '';
+
+    winningIndices.forEach(idx => {
+        const card = cards[idx];
+        const el = document.getElementById(`card-${card.id}`);
+        if (el) el.classList.add('winning-hit');
+        if (currentBets.includes(card.id)) matches++;
+        
+        const pill = document.createElement('div');
+        pill.className = 'winner-pill';
+        pill.innerText = `👑 ${card.fullName}`;
+        listContainer.appendChild(pill);
+    });
+
+    const mult = matches === 1 ? 2 : matches === 2 ? 3 : matches === 3 ? 6 : 0;
+    const payout = mult * betAmountPerCard;
+    balanceTokens += payout; updateUI();
+    
+    setTimeout(() => {
+        if (matches > 0) { 
+            barkerTalk(`Round ${currentRound} Complete! Majesty won ${payout} Tokens.`); 
+            initConfetti(); 
+            playSound(440, 'square', 0.5);
+        } else {
+            barkerTalk(`Luck shifts in Round ${currentRound}... try again!`);
+        }
+        
+        // Render "NEXT ROUND" progression button
+        const nextRoundBtn = document.createElement('button');
+        nextRoundBtn.className = 'w-full py-3 mt-2 bg-emerald-500 text-white font-black rounded-xl uppercase tracking-widest text-[10px] shadow-[0_5px_15px_rgba(16,185,129,0.3)] hover:scale-105 transition-all';
+        nextRoundBtn.innerText = `PLAY AGAIN / START ROUND ${currentRound + 1}`;
+        nextRoundBtn.onclick = () => {
+            currentRound++;
+            isDrawing = false;
+            document.querySelectorAll('.perya-card').forEach(el => el.classList.remove('winning-hit'));
+            document.querySelectorAll('#ball-layer div').forEach(el => el.style.opacity = '0');
+            listContainer.innerHTML = '';
+            updateUI();
+        };
+        listContainer.appendChild(nextRoundBtn);
+        
+    }, 1200);
+}
+
+function playSound(f, t, d) {
     if (!audioCtx) return;
     const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
     o.type = t; o.frequency.setValueAtTime(f, audioCtx.currentTime);
-    g.gain.setValueAtTime(0.04, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + d);
-    o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + d);
+    g.gain.setValueAtTime(0.04, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + d);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + d);
 }
 
 function setupCursor() {
@@ -558,33 +414,151 @@ function setupCursor() {
     const label = document.getElementById('cursor-label');
     let mx = 0, my = 0, cx = 0, cy = 0;
     const update = () => {
-        cx += (mx - cx) * 0.15; cy += (my - cy) * 0.15;
+        cx += (mx - cx) * 0.4; cy += (my - cy) * 0.4;
         cursor.style.transform = `translate3d(${cx}px, ${cy}px, 0) translate(-50%, -50%)`;
         requestAnimationFrame(update);
     };
     window.addEventListener('mousemove', (e) => {
         mx = e.clientX; my = e.clientY;
         const target = e.target;
-        cursor.classList.toggle('hovering-table', !!target.closest('#table-surface'));
-        cursor.classList.toggle('hovering-btn', !!target.closest('button, .vault-pack, .payment-btn'));
-        cursor.classList.toggle('hovering-text', target.tagName === 'INPUT');
-        
-        const lbl = target.closest('[data-label]')?.getAttribute('data-label') || (target.closest('#table-surface') ? "Royal Table" : "Exploring...");
-        label.innerText = lbl;
+        const isBtn = !!target.closest('button, .perya-card');
+        cursor.classList.toggle('hovering-btn', isBtn);
+        label.style.opacity = isBtn ? "1" : "0";
     });
-    window.addEventListener('mousedown', () => cursor.classList.add('clicking'));
-    window.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
     requestAnimationFrame(update);
 }
 
+function renderShop() {
+    const grid = document.getElementById('shop-grid');
+    if (!grid) return;
+    const items = SHOP_DATA[currentShopCategory];
+    grid.innerHTML = items.map(item => `
+        <div class="glass-pane p-4 rounded-xl text-center cursor-pointer hover:border-amber-500 transition-all flex flex-col items-center justify-between min-h-[140px]" onclick="buyItem('${item.name}', ${item.price})">
+            <div class="text-4xl mb-2">${item.icon}</div>
+            <div class="text-white font-black text-[9px] uppercase tracking-widest">${item.name}</div>
+            <div class="text-amber-500 text-[11px] font-black mt-2">🪙 ${item.price}</div>
+        </div>
+    `).join('');
+}
+
+function loadLeaderboard() {
+    const body = document.getElementById('leaderboard-body');
+    body.innerHTML = `
+        <tr class="border-b border-white/5"><td class="py-4 px-4 font-black">1</td><td class="py-4 px-4 font-bold">EMPEROR_LUXE</td><td class="py-4 px-4 text-amber-500">🪙 12,500</td></tr>
+        <tr class="border-b border-white/5"><td class="py-4 px-4 font-black">2</td><td class="py-4 px-4 font-bold">MONARCH_99</td><td class="py-4 px-4 text-amber-500">🪙 8,200</td></tr>
+    `;
+}
+
+function setupEventListeners() {
+    document.getElementById('enter-game-btn').onclick = () => handleNicknameEntry();
+    document.getElementById('refill-btn').onclick = () => document.getElementById('payment-modal').style.display = 'flex';
+    document.getElementById('leaderboard-toggle-btn').onclick = () => document.getElementById('leaderboard-modal').style.display = 'flex';
+    document.getElementById('shop-toggle-btn').onclick = () => { document.getElementById('shop-modal').style.display = 'flex'; renderShop(); };
+    document.getElementById('rules-toggle-btn').onclick = () => document.getElementById('rules-modal').style.display = 'flex';
+    document.querySelectorAll('.close-modal').forEach(btn => btn.onclick = () => btn.closest('.modal').style.display = 'none');
+    
+    document.getElementById('fullscreen-btn').onclick = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                console.warn(`Error attempting to enable fullscreen: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    };
+
+    const drawBtn = document.getElementById('draw-btn');
+    drawBtn.onmousedown = startCharging;
+    window.onmouseup = stopCharging;
+
+    // Spacebar Listeners
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && !e.repeat) {
+            // Only trigger if not typing in the nickname input
+            if (document.activeElement.tagName !== 'INPUT') {
+                e.preventDefault();
+                startCharging();
+            }
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        if (e.code === 'Space') {
+            if (document.activeElement.tagName !== 'INPUT') {
+                stopCharging();
+            }
+        }
+    });
+
+    document.querySelectorAll('.shop-tab-btn').forEach(btn => {
+        btn.onclick = () => {
+            currentShopCategory = btn.dataset.shopCat;
+            document.querySelectorAll('.shop-tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderShop();
+        };
+    });
+
+    document.querySelectorAll('.vault-pack').forEach(pack => pack.onclick = () => {
+        selectedPack = { tokens: parseInt(pack.dataset.tokens) };
+        document.querySelectorAll('.vault-pack').forEach(p => p.classList.remove('active'));
+        pack.classList.add('active');
+        checkPaymentValidity();
+    });
+
+    document.querySelectorAll('.payment-btn').forEach(btn => btn.onclick = () => {
+        selectedPaymentMethod = btn.dataset.method;
+        document.querySelectorAll('.payment-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        checkPaymentValidity();
+    });
+
+    function checkPaymentValidity() {
+        const btn = document.getElementById('complete-purchase');
+        if (selectedPack && selectedPaymentMethod) {
+            btn.disabled = false;
+            btn.classList.remove('opacity-50');
+        }
+    }
+
+    document.getElementById('complete-purchase').onclick = () => {
+        balanceTokens += selectedPack.tokens; hasToppedUp = true;
+        updateUI(); document.getElementById('payment-modal').style.display = 'none';
+        playSound(880, 'square', 0.4);
+    };
+    
+    window.addEventListener('buy-item', (e) => {
+        const { name, price } = e.detail;
+        if (balanceTokens >= price) {
+            balanceTokens -= price; updateUI();
+            barkerTalk(`Excellent choice! ${name} is yours.`);
+            alert(`You bought: ${name}!`);
+        } else {
+            alert("Insufficient tokens!");
+        }
+    });
+}
+
+async function barkerTalk(ctx) {
+    if (!process.env.API_KEY) return;
+    try {
+        const res = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: `Game dealer speaking royal decree. Max 8 words. Context: ${ctx}`,
+            config: { systemInstruction: "Enthusiastic royal carnival barker.", temperature: 1 }
+        });
+        if (res.text) document.getElementById('dealer-msg').innerText = `"${res.text.trim()}"`;
+    } catch (e) {}
+}
+
 function initConfetti() {
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 40; i++) {
         const c = document.createElement('div');
-        c.className = 'fixed pointer-events-none z-[10000] w-2 h-2 rounded-sm';
+        c.className = 'fixed pointer-events-none z-[20000] w-2 h-2 rounded-sm';
         c.style.left = Math.random() * 100 + 'vw'; c.style.top = '-20px';
-        c.style.backgroundColor = ['#ef4444', '#fbbf24', '#fff', '#34d399'][Math.floor(Math.random() * 4)];
+        c.style.backgroundColor = ['#fbbf24', '#ef4444', '#ffffff', '#ffd700'][Math.floor(Math.random() * 4)];
         document.body.appendChild(c);
-        c.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: `translateY(110vh) rotate(${Math.random() * 720}deg)`, opacity: 0 }], { duration: 2000 }).onfinish = () => c.remove();
+        c.animate([{ transform: 'translateY(0) rotate(0)', opacity: 1 }, { transform: `translateY(110vh) rotate(${Math.random() * 720}deg)`, opacity: 0 }], { duration: 2000 }).onfinish = () => c.remove();
     }
 }
 
