@@ -6,26 +6,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Perya Royale | Imperial Triple Drop</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Inter:wght@400;700;900&family=Noto+Sans+TC:wght@900&display=swap" rel="stylesheet">
     <style>
         :root {
             --fiesta-red: #ef4444;
             --fiesta-yellow: #fbbf24;
+            --fiesta-blue: #3b82f6;
+            --fiesta-green: #10b981;
             --gold-primary: #d97706;
             --gold-light: #fde68a;
             --gold-dark: #78350f;
+            --royal-blue: #2563eb;
             --table-velvet: #064e3b; 
             --mahogany: #2a1b0a;
             
-            /* Glassmorphism Variables */
-            --glass-bg: rgba(255, 255, 255, 0.08);
-            --glass-border: rgba(255, 255, 255, 0.15);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
             --table-pattern: url("data:image/svg+xml,%3Csvg width='150' height='150' viewBox='0 0 150 150' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M75 10 L80 65 L140 75 L80 85 L75 140 L70 85 L10 75 L70 65 Z' fill='%23fbbf24' fill-opacity='0.025'/%3E%3C/svg%3E");
+            
+            --linen-texture: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E"), 
+                             repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 2px);
         }
 
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0c0200;
+            background-color: #1a0501;
             color: #f8fafc;
             margin: 0;
             overflow: hidden;
@@ -35,7 +40,19 @@
             perspective: 2000px;
             display: flex;
             flex-direction: column;
+            transition: background 1s ease;
         }
+
+        body.cinema-mode { background-color: #000 !important; }
+        body.cinema-mode .live-bg-container::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.95) 100%);
+            z-index: 5;
+            pointer-events: none;
+        }
+        body.cinema-mode .rays-layer { opacity: 0.02; }
 
         #game-container {
             display: none; 
@@ -50,90 +67,83 @@
             transition: all 1s cubic-bezier(0.19, 1, 0.22, 1);
         }
 
-        #game-container.visible {
-            opacity: 1;
-            transform: scale(1) translateY(0);
+        #game-container.visible { opacity: 1; transform: scale(1) translateY(0); }
+
+        main { flex: 1; display: grid; grid-template-columns: 1fr 340px; gap: 1.5rem; min-height: 0; }
+
+        .live-bg-container { position: fixed; inset: 0; z-index: 1; background: radial-gradient(circle at 50% 50%, #4a0e0e 0%, #1a0501 100%); overflow: hidden; }
+
+        .rays-layer {
+            position: absolute; top: 50%; left: 50%; width: 250vmax; height: 250vmax; transform: translate(-50%, -50%);
+            z-index: 2; pointer-events: none; opacity: 0.1; animation: rotate-rays 80s linear infinite;
         }
 
-        main {
-            flex: 1;
-            display: grid;
-            grid-template-columns: 1fr 340px;
-            gap: 1.5rem;
-            min-height: 0;
-        }
+        .rays-primary { background: repeating-conic-gradient(from 0deg, transparent 0deg 15deg, rgba(251, 191, 36, 0.3) 15deg 30deg); }
+        .rays-secondary { animation-duration: 120s; animation-direction: reverse; background: repeating-conic-gradient(from 45deg, transparent 0deg 20deg, rgba(239, 68, 68, 0.2) 20deg 40deg); }
 
-        .live-bg-container { position: fixed; inset: 0; z-index: 1; background: radial-gradient(circle at 50% 50%, #3e1207 0%, #0c0200 100%); overflow: hidden; }
-        .rays-container { position: absolute; top: 50%; left: 50%; width: 200vmax; height: 200vmax; transform: translate(-50%, -50%); z-index: 2; pointer-events: none; opacity: 0.15; animation: rotate-rays 60s linear infinite; background: repeating-conic-gradient(from 0deg, transparent 0deg 10deg, rgba(251, 191, 36, 0.1) 10deg 20deg); }
         @keyframes rotate-rays { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+        .ambient-sparkles { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+        .sparkle { position: absolute; background: white; border-radius: 50%; opacity: 0; animation: float-sparkle var(--duration) linear infinite; filter: blur(1px); }
+        @keyframes float-sparkle { 0% { transform: translateY(0) scale(0); opacity: 0; } 20% { opacity: 0.6; } 80% { opacity: 0.6; } 100% { transform: translateY(100vh) scale(1); opacity: 0; } }
+
+        .fiesta-banners { position: fixed; top: 0; left: 0; width: 100%; height: 80px; z-index: 100; pointer-events: none; display: flex; justify-content: space-around; padding: 0 5%; }
+        .flag { width: 22px; height: 32px; background-color: var(--color); clip-path: polygon(0% 0%, 100% 0%, 50% 100%); animation: flag-swing var(--delay) ease-in-out infinite alternate; transform-origin: top center; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        @keyframes flag-swing { from { transform: rotate(-18deg); } to { transform: rotate(18deg); } }
+
+        .mascot-hero-section { position: relative; display: flex; flex-direction: column; align-items: center; margin-bottom: 2.5rem; z-index: 100; }
+        .floating-particle { position: absolute; pointer-events: none; z-index: 150; animation: particle-fly 3s ease-out infinite; }
+        @keyframes particle-fly { 0% { transform: translate(0, 0) scale(0); opacity: 0; } 50% { opacity: 0.8; } 100% { transform: translate(var(--tx), var(--ty)) scale(1.5) rotate(var(--tr)); opacity: 0; } }
+
+        .speech-bubble { background: #fff; color: #d97706; padding: 16px 32px; border-radius: 50px; font-weight: 900; font-size: 24px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 25px; position: relative; box-shadow: 0 15px 40px rgba(0,0,0,0.5), inset 0 -4px 0 rgba(0,0,0,0.1); animation: bubble-float 3s ease-in-out infinite; border: 4px solid #fbbf24; }
+        .speech-bubble::after { content: ''; position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); border-left: 18px solid transparent; border-right: 18px solid transparent; border-top: 18px solid #fbbf24; }
+
+        .kawaii-character { width: 180px; height: 200px; position: relative; animation: char-bounce 2.5s ease-in-out infinite; transform-origin: bottom center; }
+        .char-cape { width: 130px; height: 90px; background: linear-gradient(135deg, #ef4444, #991b1b); position: absolute; top: 60px; left: 25px; border-radius: 20px; z-index: 1; border: 4px solid #451a03; animation: cape-wave 2s ease-in-out infinite; transform-origin: top center; }
+        .char-head { width: 110px; height: 110px; background: radial-gradient(circle at 35% 35%, #fffbeb, #fbbf24 65%, #d97706); border: 5px solid #451a03; border-radius: 50% 50% 45% 45%; position: absolute; top: 10px; left: 35px; z-index: 20; box-shadow: inset -8px -8px 0 rgba(0,0,0,0.1), 0 15px 30px rgba(0,0,0,0.4); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .char-crown { position: absolute; top: -40px; left: 50%; transform: translateX(-50%); width: 55px; height: 40px; background: linear-gradient(to bottom, #fde68a, #fbbf24); clip-path: polygon(0% 100%, 0% 15%, 25% 60%, 50% 0%, 75% 60%, 100% 15%, 100% 100%); border: 3px solid #451a03; z-index: 30; filter: drop-shadow(0 0 10px rgba(251,191,36,0.8)); animation: crown-wiggle 3s ease-in-out infinite; }
+        .char-eyes { display: flex; gap: 24px; margin-top: -10px; }
+        .char-eye { width: 22px; height: 28px; background: #111; border-radius: 50%; position: relative; overflow: hidden; border: 2.5px solid #000; animation: eye-wink 5s infinite; }
+        .eye-sparkle { width: 8px; height: 8px; background: #fff; border-radius: 50%; position: absolute; top: 4px; left: 4px; }
+        .eye-sparkle-sm { width: 4px; height: 4px; background: #fff; border-radius: 50%; position: absolute; bottom: 6px; right: 4px; }
+        .char-blush { width: 24px; height: 14px; background: #fda4af; border-radius: 50%; position: absolute; top: 68px; opacity: 0.7; filter: blur(2px); animation: blush-pulse 2s ease-in-out infinite; }
+        .char-mouth { width: 28px; height: 15px; background: #000; border-radius: 0 0 30px 30px; margin-top: 10px; position: relative; border: 2px solid #000; }
+        .char-body { width: 85px; height: 75px; background: linear-gradient(to bottom, #dc2626, #7f1d1d); border: 5px solid #451a03; border-radius: 40px 40px 50px 50px; position: absolute; bottom: 25px; left: 48px; z-index: 15; box-shadow: inset -6px -6px 0 rgba(0,0,0,0.2); display: flex; justify-content: center; }
+        .char-arm { width: 55px; height: 22px; background: #fbbf24; border: 4px solid #451a03; border-radius: 20px; position: absolute; top: 90px; z-index: 10; }
+        .arm-l { left: 0; transform-origin: right center; transform: rotate(-35deg); animation: arm-swing 3s ease-in-out infinite; }
+        .arm-r { right: 0; transform-origin: left center; transform: rotate(35deg); animation: hand-wave 1.5s ease-in-out infinite; }
+
+        @keyframes char-bounce { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-30px) scale(0.9, 1.1); } }
+        @keyframes eye-wink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
+        @keyframes bubble-float { 0%, 100% { transform: translateY(0) rotate(2deg); } 50% { transform: translateY(-10px) rotate(-2deg); } }
 
         #nickname-overlay {
             position: fixed; inset: 0; z-index: 100000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: radial-gradient(circle at 50% 50%, #3e1207 0%, #0c0200 100%);
-            transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.7, 0, 0.3, 1);
+            background: transparent; transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.7, 0, 0.3, 1);
         }
-
         #nickname-overlay.fade-out { opacity: 0; transform: scale(1.5); pointer-events: none; }
 
         .royal-input {
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid rgba(251, 191, 36, 0.3);
-            border-radius: 1rem;
-            color: #fbbf24;
-            padding: 1.25rem 2rem;
-            font-size: 1.5rem;
-            font-weight: 900;
-            text-align: center;
-            outline: none;
-            transition: all 0.3s;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            width: 320px;
-            cursor: text;
-            z-index: 10;
-        }
-        .royal-input:focus { border-color: #fbbf24; box-shadow: 0 0 30px rgba(251, 191, 36, 0.2); background: rgba(255,255,255,0.08); }
-
-        #custom-cursor {
-            position: fixed; width: 120px; height: 120px; pointer-events: none; z-index: 200000;
-            top: 0; left: 0; will-change: transform; display: flex; align-items: center; justify-content: center; transition: opacity 0.3s;
+            background: rgba(255, 255, 255, 0.05); border: 4px solid rgba(251, 191, 36, 0.4); border-radius: 1.5rem;
+            color: #fbbf24; padding: 1.25rem 2rem; font-size: 1.5rem; font-weight: 900; text-align: center;
+            outline: none; transition: all 0.3s; box-shadow: 0 0 25px rgba(0,0,0,0.6); width: 360px;
         }
 
-        .cursor-outer-ring {
-            position: absolute; width: 60px; height: 60px; border: 1px dashed rgba(251, 191, 36, 0.2); border-radius: 50%;
-            animation: rotate-rays 10s linear infinite; opacity: 0.5; transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-        }
+        #custom-cursor { position: fixed; width: 120px; height: 120px; pointer-events: none; z-index: 200000; top: 0; left: 0; will-change: transform; display: flex; align-items: center; justify-content: center; }
+        .cursor-ring { position: absolute; width: 34px; height: 34px; border: 2.5px solid rgba(251, 191, 36, 0.6); border-radius: 50%; box-shadow: 0 0 15px rgba(251, 191, 36, 0.3); }
+        .cursor-dot { width: 8px; height: 8px; background: #fff; border-radius: 50%; box-shadow: 0 0 15px #fbbf24; z-index: 10; }
+        .cursor-label { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); white-space: nowrap; color: #fbbf24; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em; opacity: 0; text-shadow: 0 2px 8px rgba(0,0,0,1); transition: all 0.3s; }
 
-        .cursor-ring {
-            position: absolute; width: 34px; height: 34px; border: 2.5px solid rgba(251, 191, 36, 0.6); border-radius: 50%;
-            transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1); box-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
-        }
-
-        .cursor-dot { width: 8px; height: 8px; background: #fff; border-radius: 50%; box-shadow: 0 0 15px #fbbf24; z-index: 10; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .cursor-label {
-            position: absolute; top: 60px; left: 50%; transform: translateX(-50%); white-space: nowrap;
-            color: #fbbf24; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em;
-            opacity: 0; text-shadow: 0 2px 8px rgba(0,0,0,1); transition: all 0.3s;
-        }
-
-        #custom-cursor.hovering-btn .cursor-ring { width: 22px; height: 22px; background: rgba(251, 191, 36, 0.3); border-color: #fff; box-shadow: 0 0 25px rgba(251, 191, 36, 0.5); }
-        #custom-cursor.hovering-btn .cursor-label { opacity: 1; transform: translateX(-50%) translateY(10px); }
-
-        #table-surface {
-            background-color: var(--table-velvet); background-image: var(--table-pattern), radial-gradient(circle at center, rgba(251,191,36,0.12) 0%, transparent 85%);
-            border: 26px solid var(--mahogany); border-radius: 5rem; transform: rotateX(12deg); transform-style: preserve-3d;
-            box-shadow: 0 80px 160px rgba(0,0,0,0.98), inset 0 0 120px rgba(0,0,0,0.8), inset 0 0 0 4px #fbbf2433, 0 0 60px rgba(0,0,0,0.8);
-            position: relative; padding: 5rem; transition: all 0.1s; width: 98%; height: 94%; display: flex; align-items: center; justify-content: center; overflow: visible;
-        }
-
-        /* Glassmorphism Cards */
+        /* OVERHAULED MIDNIGHT CARD DESIGN */
         .perya-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(14px) saturate(160%);
-            -webkit-backdrop-filter: blur(14px) saturate(160%);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 12px;
-            box-shadow: 0 10px 35px 0 rgba(0, 0, 0, 0.4);
+            background-color: #0f172a; 
+            background-image: var(--linen-texture);
+            border: 3px solid var(--gold-primary);
+            outline: 1px solid rgba(251, 191, 36, 0.4);
+            outline-offset: -8px;
+            border-radius: 14px;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.8), inset 0 0 40px rgba(0,0,0,0.4);
             transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
             transform-style: preserve-3d;
             position: relative;
@@ -147,123 +157,227 @@
             cursor: none;
         }
 
-        .perya-card::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%);
-            pointer-events: none;
+        .perya-card:not(.selected):hover {
+            animation: warm-golden-pulse 2s infinite ease-in-out;
+            transform: translateY(-5px) rotateX(5deg);
         }
 
-        .card-ornate-corner { position: absolute; width: 20px; height: 20px; border: 1.2px solid rgba(251, 191, 36, 0.3); pointer-events: none; z-index: 10; }
-        .corner-tl { top: 6px; left: 6px; border-right: 0; border-bottom: 0; }
-        .corner-tr { top: 6px; right: 6px; border-left: 0; border-bottom: 0; }
-        .corner-bl { bottom: 6px; left: 6px; border-right: 0; border-top: 0; }
-        .corner-br { bottom: 6px; right: 6px; border-left: 0; border-top: 0; }
+        @keyframes warm-golden-pulse {
+            0% { box-shadow: 0 10px 35px rgba(0,0,0,0.8), 0 0 0px rgba(251, 191, 36, 0); }
+            50% { box-shadow: 0 10px 35px rgba(0,0,0,0.8), 0 0 25px rgba(251, 191, 36, 0.5); }
+            100% { box-shadow: 0 10px 35px rgba(0,0,0,0.8), 0 0 0px rgba(251, 191, 36, 0); }
+        }
 
-        @keyframes chosen-float {
-            0%, 100% { transform: translateZ(90px) translateY(-12px) scale(1.12); }
-            50% { transform: translateZ(110px) translateY(-20px) scale(1.15); }
+        .card-ornate-corner {
+            position: absolute; width: 34px; height: 34px; border: 2px solid #fbbf24; z-index: 10; pointer-events: none;
+            filter: drop-shadow(0 0 2px rgba(0,0,0,0.8));
+        }
+        .corner-tl { top: 4px; left: 4px; border-right: 0; border-bottom: 0; border-radius: 8px 0 0 0; }
+        .corner-tr { top: 4px; right: 4px; border-left: 0; border-bottom: 0; border-radius: 0 8px 0 0; }
+        .corner-bl { bottom: 4px; left: 4px; border-right: 0; border-top: 0; border-radius: 0 0 0 8px; }
+        .corner-br { bottom: 4px; right: 4px; border-left: 0; border-top: 0; border-radius: 0 0 8px 0; }
+
+        /* GLASSY NAG EFFECT */
+        .card-grid.max-bets .perya-card.selected {
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            backdrop-filter: blur(12px) saturate(180%);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.1);
         }
 
         .perya-card.selected {
-            background: rgba(251, 191, 36, 0.12);
-            border: 2px solid rgba(251, 191, 36, 0.7);
-            box-shadow: 0 30px 70px rgba(0,0,0,0.6), 0 0 30px rgba(251, 191, 36, 0.4);
-            animation: chosen-float 3s infinite ease-in-out;
-            z-index: 200 !important;
+            transform: translateY(-12px) translateZ(40px);
+            border-color: var(--royal-blue);
+            box-shadow: 0 30px 60px rgba(37, 99, 235, 0.5), inset 0 0 40px rgba(37, 99, 235, 0.2);
         }
 
-        .card-symbol-glow { filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1); z-index: 20; }
-        .selected .card-symbol-glow { transform: scale(1.35) translateZ(10px); filter: drop-shadow(0 0 20px currentColor) drop-shadow(0 0 5px white); }
+        /* LIVELY WINNING STATE */
+        .perya-card.winning-hit {
+            border-color: #ffffff;
+            animation: lively-celebration 0.6s infinite ease-in-out;
+            z-index: 100 !important;
+        }
 
-        .suit-ruby { color: #ff5555; } .suit-onyx { color: #e5e7eb; }
+        /* JACKPOT STATE */
+        .perya-card.selected.winning-hit {
+            animation: jackpot-celebration 0.5s infinite ease-in-out;
+            border-color: #fbbf24;
+            border-width: 4px;
+        }
 
-        .glass-pane { background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        @keyframes lively-celebration {
+            0%, 100% { transform: translateY(-12px) translateZ(60px) rotate(0deg) scale(1.1); box-shadow: 0 0 30px #fbbf24; }
+            25% { transform: translateY(-20px) translateZ(70px) rotate(3deg) scale(1.12); box-shadow: 0 0 50px #fbbf24; }
+            75% { transform: translateY(-20px) translateZ(70px) rotate(-3deg) scale(1.12); box-shadow: 0 0 50px #fbbf24; }
+        }
+
+        @keyframes jackpot-celebration {
+            0%, 100% { transform: translateY(-20px) translateZ(100px) scale(1.2) rotate(0deg); box-shadow: 0 0 80px #fbbf24, 0 0 120px rgba(251, 191, 36, 0.4); }
+            25% { transform: translateY(-35px) translateZ(120px) scale(1.25) rotate(5deg); box-shadow: 0 0 120px #fbbf24, 0 0 160px rgba(251, 191, 36, 0.6); }
+            75% { transform: translateY(-35px) translateZ(120px) scale(1.25) rotate(-5deg); box-shadow: 0 0 120px #fbbf24, 0 0 160px rgba(251, 191, 36, 0.6); }
+        }
+
+        /* DESIGNER NAME STYLE */
+        .designer-container {
+            position: relative;
+            display: inline-block;
+            padding: 0.5rem 2rem;
+            margin-top: 1rem;
+            transition: all 0.5s ease;
+        }
+        .designer-container::before, .designer-container::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%) scaleX(0);
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #fbbf24, transparent);
+            transition: transform 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        .designer-container::before { top: 0; }
+        .designer-container::after { bottom: 0; }
+        .designer-container:hover::before, .designer-container:hover::after { transform: translateX(-50%) scaleX(1); }
+
+        .credits-text {
+            font-family: 'Cinzel Decorative', cursive;
+            background: linear-gradient(90deg, #d97706, #fbbf24, #fff, #fbbf24, #d97706);
+            background-size: 200% auto;
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent;
+            font-weight: 900; 
+            letter-spacing: 0.15em; 
+            text-transform: uppercase;
+            animation: shine 4s linear infinite;
+            text-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
+            font-size: 18px;
+            display: inline-block;
+        }
+
+        .credits-tag {
+            font-family: 'Inter', sans-serif;
+            font-size: 9px;
+            font-weight: 900;
+            letter-spacing: 0.4em;
+            color: #fbbf24;
+            opacity: 0.4;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .kanji-name {
+            font-family: 'Noto Sans TC', sans-serif;
+            font-weight: 900;
+            background: linear-gradient(to bottom, #fff, #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-left: 0.5rem;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+
+        @keyframes shine { to { background-position: 200% center; } }
+
         .royal-title { font-family: 'Cinzel Decorative', cursive; background: linear-gradient(to bottom, #fff, #fbbf24, #d97706); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        
+        .glass-pane { background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.08); }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.96); backdrop-filter: blur(18px); z-index: 15000; display: none; align-items: center; justify-content: center; padding: 2rem; }
-
-        @keyframes winner-celebrate {
-            0% { filter: brightness(1) drop-shadow(0 0 0px #fbbf24); transform: scale(1); }
-            50% { filter: brightness(2.2) drop-shadow(0 0 25px #fbbf24); transform: scale(1.05) translateZ(50px); border-color: #fff; }
-            100% { filter: brightness(1) drop-shadow(0 0 0px #fbbf24); transform: scale(1); }
-        }
-        .winning-hit { animation: winner-celebrate 0.8s infinite alternate !important; z-index: 300 !important; background: rgba(251, 191, 36, 0.3) !important; border-color: #fbbf24 !important; }
-
-        .ball-layer { position: absolute; inset: 5rem; pointer-events: none; z-index: 1000; overflow: visible; }
-
-        .winner-pill {
-            background: rgba(251, 191, 36, 0.15);
-            border: 1px solid rgba(251, 191, 36, 0.4);
-            color: #fbbf24;
-            padding: 6px 16px;
-            border-radius: 99px;
-            font-size: 11px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.12em;
-            animation: slideUp 0.6s cubic-bezier(0.19, 1, 0.22, 1) forwards;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        
+        .suit-ruby { color: #ff4444; text-shadow: 0 0 15px rgba(239, 68, 68, 0.8); } 
+        .suit-onyx { color: #ffffff; text-shadow: 0 0 15px rgba(255, 255, 255, 0.4); }
+        
+        #table-surface {
+            background-color: var(--table-velvet); background-image: var(--table-pattern), radial-gradient(circle at center, rgba(251,191,36,0.15) 0%, transparent 85%);
+            border: 26px solid var(--mahogany); border-radius: 5rem; transform: rotateX(12deg); transform-style: preserve-3d;
+            box-shadow: 0 80px 160px rgba(0,0,0,0.98), inset 0 0 120px rgba(0,0,0,0.8), inset 0 0 0 4px #fbbf2433;
+            position: relative; padding: 5rem; transition: all 0.1s; width: 98%; height: 94%; display: flex; align-items: center; justify-content: center; overflow: visible;
         }
 
-        @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-
-        .vault-pack.active { border-color: #fbbf24; background: rgba(251, 191, 36, 0.1); }
-        .payment-btn.active { background: rgba(251, 191, 36, 0.2); border-color: #fbbf24; }
-
-        .shop-tab-btn.active { background: #fbbf24; color: #000; box-shadow: 0 0 15px rgba(251, 191, 36, 0.4); }
-
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; } 
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(251, 191, 36, 0.2); border-radius: 10px; }
-
-        /* Nickname Chip Registry */
-        .registry-chip {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: rgba(251, 191, 36, 0.6);
-            padding: 0.4rem 1rem;
-            border-radius: 99px;
-            font-size: 10px;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-            cursor: pointer;
+        .front-utility-bar {
+            position: absolute; top: 1.5rem; right: 1.5rem;
+            display: flex; gap: 0.75rem; z-index: 1000000;
         }
-        .registry-chip:hover {
-            background: rgba(251, 191, 36, 0.1);
-            border-color: rgba(251, 191, 36, 0.4);
-            color: #fbbf24;
-            transform: translateY(-2px);
+        .front-util-btn {
+            background: rgba(0,0,0,0.6); border: 2px solid rgba(251, 191, 36, 0.4);
+            padding: 12px 24px; border-radius: 99px; font-size: 11px; font-weight: 900;
+            text-transform: uppercase; color: #fbbf24; cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        .front-util-btn:hover { background: #fbbf24; color: #000; transform: scale(1.05); }
+        .front-util-btn.active { background: #fbbf24; color: #000; box-shadow: 0 0 25px rgba(251, 191, 36, 0.6); }
     </style>
-<script type="importmap"> { "imports": { "@google/genai": "https://esm.sh/@google/genai@^1.34.0" } } </script>
+<script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0"
+  }
+}
+</script>
 </head>
 <body>
-    <div class="live-bg-container"><div class="rays-container"></div></div>
+    <div class="live-bg-container">
+        <div class="rays-layer rays-primary"></div>
+        <div class="rays-layer rays-secondary"></div>
+        <div id="ambient-sparkles-container" class="ambient-sparkles"></div>
+    </div>
+
+    <div class="fiesta-banners"></div>
 
     <div id="nickname-overlay">
-        <div class="text-center mb-8">
-            <h1 class="text-6xl md:text-8xl royal-title mb-4">PERYA ROYALE</h1>
-            <p class="text-amber-400 font-bold tracking-[0.3em] uppercase opacity-60">Imperial Triple Drop Edition</p>
+        <div class="front-utility-bar">
+            <button id="cinema-mode-btn" class="front-util-btn">Cinema Mode: OFF</button>
+            <button id="fullscreen-front-btn" class="front-util-btn">⛶ Fullscreen</button>
         </div>
+
+        <div class="text-center mb-4">
+            <h1 class="text-6xl md:text-8xl royal-title mb-1">PERYA ROYALE</h1>
+            <p class="text-amber-400 font-bold tracking-[0.4em] uppercase opacity-60">Imperial Triple Drop Edition</p>
+        </div>
+
+        <div class="mascot-hero-section">
+            <div id="character-particles"></div>
+            <div class="speech-bubble">Mabuhay! Lets Play!</div>
+            <div class="kawaii-character">
+                <div class="char-cape"></div>
+                <div class="char-arm arm-l"></div>
+                <div class="char-arm arm-r"></div>
+                <div class="char-body"></div>
+                <div class="char-head">
+                    <div class="char-crown"></div>
+                    <div class="char-blush blush-l"></div>
+                    <div class="char-blush blush-r"></div>
+                    <div class="char-eyes">
+                        <div class="char-eye"><div class="eye-sparkle"></div><div class="eye-sparkle-sm"></div></div>
+                        <div class="char-eye"><div class="eye-sparkle"></div><div class="eye-sparkle-sm"></div></div>
+                    </div>
+                    <div class="char-mouth"></div>
+                </div>
+            </div>
+        </div>
+
         <div class="relative group mb-8">
             <input type="text" id="nickname-input" class="royal-input" placeholder="MONIKER" maxlength="12" autocomplete="off" autofocus>
-            <div class="absolute -inset-1 bg-gradient-to-r from-amber-600 to-yellow-300 rounded-[1.1rem] blur opacity-20 group-hover:opacity-40 transition duration-1000 pointer-events-none"></div>
+            <div class="absolute -inset-1 bg-gradient-to-r from-amber-600 to-yellow-300 rounded-[2.1rem] blur opacity-20 group-hover:opacity-40 transition duration-1000 pointer-events-none"></div>
         </div>
-        <button id="enter-game-btn" class="px-12 py-5 bg-amber-500 text-stone-900 font-black rounded-xl uppercase tracking-widest text-xl shadow-[0_10px_40px_rgba(251,191,36,0.3)] transition-all hover:scale-105 active:scale-95">Take Your Throne</button>
+        <button id="enter-game-btn" class="px-14 py-6 bg-amber-500 text-stone-900 font-black rounded-xl uppercase tracking-widest text-3xl shadow-[0_20px_60px_rgba(251,191,36,0.5)] transition-all hover:scale-110 active:scale-90 border-b-8 border-amber-700">Take Your Throne</button>
         
-        <div class="mt-12 flex flex-col items-center gap-4">
-            <p class="text-[9px] font-black text-amber-500 uppercase tracking-widest opacity-40">Legacy of Monarchs</p>
-            <div id="recent-players-chips" class="flex flex-wrap justify-center gap-2 max-w-md px-4">
-                <!-- Chips injected via JS -->
+        <div class="mt-8 flex flex-col items-center gap-4">
+            <p class="text-[11px] font-black text-amber-500 uppercase tracking-widest opacity-40">Quick Resume</p>
+            <div id="recent-players-chips" class="flex flex-wrap justify-center gap-2 max-w-md px-4"></div>
+        </div>
+
+        <div class="mt-12 text-center">
+            <div class="designer-container group">
+                <span class="credits-tag">CHIEF ARCHITECT</span>
+                <p class="credits-text">JAYLEMER CABALHUG <span class="kanji-name">卡傑伊</span></p>
+                <div class="flex justify-center gap-2 mt-2 opacity-20 group-hover:opacity-100 transition-opacity">
+                    <div class="w-10 h-px bg-gradient-to-r from-transparent to-amber-500"></div>
+                    <div class="w-1 h-1 bg-amber-500 rounded-full"></div>
+                    <div class="w-10 h-px bg-gradient-to-l from-transparent to-amber-500"></div>
+                </div>
             </div>
         </div>
     </div>
 
     <div id="custom-cursor">
-        <div class="cursor-outer-ring"></div>
         <div class="cursor-ring"></div><div class="cursor-dot"></div>
         <div id="cursor-label" class="cursor-label">Royal Seal</div>
     </div>
@@ -298,7 +412,7 @@
         <main>
             <section id="table-container" class="flex items-center justify-center overflow-visible">
                 <div id="table-surface">
-                    <div id="card-grid" class="grid grid-cols-4 gap-4 relative z-50 w-full max-w-[580px]"></div>
+                    <div id="card-grid" class="card-grid grid grid-cols-4 gap-4 relative z-50 w-full max-w-[580px]"></div>
                     <div id="ball-layer" class="ball-layer"></div>
                 </div>
             </section>
@@ -333,71 +447,95 @@
         </main>
     </div>
 
-    <!-- PAYMENT MODAL (CHEAP BUNDLES & RESTORED METHODS) -->
+    <!-- SOUVENIR TICKET -->
+    <div id="souvenir-ticket" class="souvenir-ticket">
+        <div class="ticket-header">ROYAL SOUVENIR</div>
+        <div id="ticket-item-icon" class="ticket-icon">🎁</div>
+        <h3 id="ticket-item-name" class="text-xl font-black uppercase mb-1">Item Name</h3>
+        <p class="text-[9px] text-stone-400 uppercase tracking-widest mb-4">Official Bazaar Receipt</p>
+        <div class="ticket-footer text-left text-[9px] font-mono leading-tight space-y-1">
+            <p>MONARCH: <span id="ticket-player-name">---</span></p>
+            <p>SERIAL: #ROY-88-25</p>
+            <p>DESIGNER: JAYLEMER CABALHUG</p>
+            <p class="mt-2 text-center border-t border-dashed border-black/20 pt-1 italic opacity-50">Keep for your archives!</p>
+        </div>
+        <button onclick="document.getElementById('souvenir-ticket').classList.remove('visible')" class="mt-4 px-8 py-2 bg-amber-500 text-stone-900 rounded-full font-black text-[11px] uppercase shadow-lg transition-transform active:scale-90">Keep</button>
+    </div>
+
+    <!-- RULES MODAL -->
+    <div id="rules-modal" class="modal">
+        <div class="glass-pane p-10 rounded-[2.5rem] max-w-2xl w-full border-2 border-amber-500/40 relative shadow-2xl">
+            <h2 class="text-5xl font-black text-amber-400 text-center mb-8 royal-title">Imperial Decrees</h2>
+            <div class="space-y-6 text-white/90 text-sm font-medium leading-relaxed">
+                <div class="bg-white/5 p-4 rounded-xl border border-white/10">
+                    <h3 class="text-amber-500 font-black uppercase mb-2">1. The Royal Wager</h3>
+                    <p>Select up to 3 cards on the Imperial Table. Each selection costs 10 Tokens. Chosen cards are marked in <span class="text-blue-400 font-black">Royal Blue</span>.</p>
+                </div>
+                <div class="bg-white/5 p-4 rounded-xl border border-white/10">
+                    <h3 class="text-amber-500 font-black uppercase mb-2">2. Charging the Triple Drop</h3>
+                    <p>Hold the <strong>HOLD SPACE</strong> button to build imperial energy. Releasing it launches 3 Golden Balls into the arena. They celebrate across cards until settling!</p>
+                </div>
+                <div class="bg-white/5 p-4 rounded-xl border border-white/10">
+                    <h3 class="text-amber-500 font-black uppercase mb-2">3. The Imperial Rewards</h3>
+                    <p>Winning cards perform a <span class="text-yellow-400 font-black">Lively Dance</span>. If a ball lands on your card, you win! 1 Match = 2X, 2 Matches = 3X, 3 Matches = 6X.</p>
+                </div>
+            </div>
+            <button class="close-modal mt-10 w-full py-5 bg-amber-500 text-stone-900 font-black rounded-xl uppercase tracking-widest text-lg shadow-xl hover:bg-amber-400 transition-colors">Accept Decrees</button>
+        </div>
+    </div>
+
+    <!-- PAYMENT MODAL -->
     <div id="payment-modal" class="modal">
-        <div class="glass-pane p-8 rounded-[2rem] max-w-xl w-full border-2 border-amber-500/40 relative shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar">
+        <div class="glass-pane p-8 rounded-[2rem] max-w-xl w-full border-2 border-amber-500/40 relative shadow-2xl">
             <h2 class="text-3xl font-black text-amber-400 text-center mb-8 uppercase tracking-widest">Imperial Treasury</h2>
-            <div id="bundle-container" class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-                <div class="vault-pack p-4 rounded-xl cursor-pointer text-center bg-white/5 border border-white/5 transition-all hover:scale-105" data-tokens="100">
-                    <div class="text-3xl mb-2">💰</div><div class="text-white font-black text-lg">100</div><div class="text-[9px] font-bold text-amber-500 uppercase mt-1">50 NTD</div>
+            <div id="bundle-container" class="grid grid-cols-3 gap-4 mb-8">
+                <div class="vault-pack p-4 rounded-xl cursor-pointer text-center bg-white/5 border border-white/5" data-tokens="100">
+                    <div class="text-3xl mb-2">💰</div><div class="text-white font-black">100</div><div class="text-[9px] text-amber-500 mt-1">50 NTD</div>
                 </div>
-                <div class="vault-pack p-4 rounded-xl cursor-pointer text-center bg-white/5 border border-white/5 transition-all hover:scale-105" data-tokens="250">
-                    <div class="text-3xl mb-2">💎</div><div class="text-white font-black text-lg">250</div><div class="text-[9px] font-bold text-amber-500 uppercase mt-1">100 NTD</div>
+                <div class="vault-pack p-4 rounded-xl cursor-pointer text-center bg-white/5 border border-white/5" data-tokens="250">
+                    <div class="text-3xl mb-2">💎</div><div class="text-white font-black">250</div><div class="text-[9px] text-amber-500 mt-1">100 NTD</div>
                 </div>
-                <div class="vault-pack p-4 rounded-xl cursor-pointer text-center bg-white/5 border border-white/5 transition-all hover:scale-105" data-tokens="600">
-                    <div class="text-3xl mb-2">🔥</div><div class="text-white font-black text-lg">600</div><div class="text-[9px] font-bold text-orange-400 uppercase mt-1">200 NTD</div>
+                <div class="vault-pack p-4 rounded-xl cursor-pointer text-center bg-white/5 border border-white/5" data-tokens="600">
+                    <div class="text-3xl mb-2">🔥</div><div class="text-white font-black">600</div><div class="text-[9px] text-orange-400 mt-1">200 NTD</div>
                 </div>
             </div>
-            
-            <div class="mb-4 text-[10px] font-black uppercase text-amber-500/50 tracking-widest text-center">Select Payment Decree</div>
             <div id="payment-methods" class="grid grid-cols-2 gap-3 mb-8">
-                <button class="payment-btn p-3 rounded-xl border border-white/10 uppercase text-[9px] font-black text-white/70 hover:bg-white/10" data-method="Cash">Cash</button>
-                <button class="payment-btn p-3 rounded-xl border border-white/10 uppercase text-[9px] font-black text-white/70 hover:bg-white/10" data-method="Line Pay">Line Pay</button>
-                <button class="payment-btn p-3 rounded-xl border border-white/10 uppercase text-[9px] font-black text-white/70 hover:bg-white/10" data-method="Debit Card">Debit Card</button>
-                <button class="payment-btn p-3 rounded-xl border border-white/10 uppercase text-[9px] font-black text-white/70 hover:bg-white/10" data-method="Taiwan Pay">Taiwan Pay</button>
+                <button class="payment-btn p-3 rounded-xl border border-white/10 uppercase text-[9px] font-black" data-method="Cash">Cash</button>
+                <button class="payment-btn p-3 rounded-xl border border-white/10 uppercase text-[9px] font-black" data-method="Line Pay">Line Pay</button>
+                <button class="payment-btn p-3 rounded-xl border border-white/10 uppercase text-[9px] font-black" data-method="Debit Card">Debit Card</button>
+                <button class="payment-btn p-3 rounded-xl border border-white/10 uppercase text-[9px] font-black" data-method="Taiwan Pay">Taiwan Pay</button>
             </div>
-            
-            <button id="complete-purchase" class="w-full py-5 bg-amber-500 text-stone-900 font-black rounded-xl uppercase opacity-50 shadow-xl" disabled>Finalize Deposit</button>
+            <div id="qr-simulation-area">
+                <div class="qr-placeholder" id="qr-grid"></div>
+                <p class="text-white text-[10px] font-black tracking-widest animate-pulse">SCAN TO AUTHORIZE DEPOSIT</p>
+                <p id="qr-method-name" class="text-amber-400 text-[11px] font-bold uppercase"></p>
+            </div>
+            <button id="complete-purchase" class="w-full py-5 bg-amber-500 text-stone-900 font-black rounded-xl uppercase opacity-50" disabled>Finalize Deposit</button>
             <button class="close-modal absolute top-6 right-6 text-2xl opacity-50 hover:opacity-100 transition-opacity">×</button>
         </div>
     </div>
 
-    <!-- SHOP MODAL (CATEGORIES RESTORED) -->
     <div id="shop-modal" class="modal">
-        <div class="glass-pane p-8 rounded-[2.5rem] max-w-4xl w-full border-2 border-amber-500/40 relative shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+        <div class="glass-pane p-8 rounded-[2.5rem] max-w-4xl w-full border-2 border-amber-500/40 relative shadow-2xl flex flex-col max-h-[85vh]">
             <h2 class="text-4xl font-black text-amber-400 text-center mb-6 royal-title uppercase tracking-widest shrink-0">Imperial Bazaar</h2>
             <div class="flex justify-center gap-3 mb-6 shrink-0">
-                <button class="shop-tab-btn px-6 py-2 rounded-full font-black uppercase text-[10px] glass-pane transition-all active" data-shop-cat="Foods">Traditional Foods</button>
-                <button class="shop-tab-btn px-6 py-2 rounded-full font-black uppercase text-[10px] glass-pane transition-all" data-shop-cat="Toys">Perya Toys</button>
-                <button class="shop-tab-btn px-6 py-2 rounded-full font-black uppercase text-[10px] glass-pane transition-all" data-shop-cat="Keychains">Imperial Relics</button>
+                <button class="shop-tab-btn px-6 py-2 rounded-full font-black uppercase text-[10px] glass-pane active" data-shop-cat="Foods">Foods</button>
+                <button class="shop-tab-btn px-6 py-2 rounded-full font-black uppercase text-[10px] glass-pane" data-shop-cat="Toys">Toys</button>
+                <button class="shop-tab-btn px-6 py-2 rounded-full font-black uppercase text-[10px] glass-pane" data-shop-cat="Keychains">Keychains</button>
             </div>
             <div id="shop-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 overflow-y-auto custom-scrollbar flex-1 pb-4"></div>
-            <button class="close-modal mt-6 w-full py-4 bg-amber-500 text-stone-900 font-black rounded-xl uppercase tracking-widest transition-all">Return to Throne</button>
-        </div>
-    </div>
-
-    <!-- OTHER MODALS -->
-    <div id="rules-modal" class="modal">
-        <div class="glass-pane p-8 rounded-[2.5rem] max-w-2xl w-full border-2 border-amber-500/40 relative shadow-2xl flex flex-col items-center">
-            <h2 class="text-4xl font-black text-amber-400 text-center mb-8 royal-title uppercase tracking-widest">Royal Decrees</h2>
-            <div class="space-y-6 text-white/90 text-sm leading-relaxed max-w-md font-medium">
-                <div class="flex gap-4"><span class="text-amber-500">I.</span><p>Claim up to <strong class="text-amber-400">3 Cards</strong> across the table.</p></div>
-                <div class="flex gap-4"><span class="text-amber-500">II.</span><p>Hold the <strong class="text-amber-400">Launch Orbe</strong> to charge energy levels.</p></div>
-                <div class="flex gap-4"><span class="text-amber-500">III.</span><p>Three crystals will hop <strong class="text-amber-400">3-15 times</strong> with royal variance.</p></div>
-                <div class="flex gap-4"><span class="text-amber-500">IV.</span><p>Crystals may land on the same card, multiplying fortune up to <strong class="text-amber-400">6X</strong>.</p></div>
-            </div>
-            <button class="close-modal mt-10 w-full py-4 bg-amber-500 text-stone-900 font-black rounded-xl uppercase">I Acknowledge</button>
+            <button class="close-modal mt-6 w-full py-4 bg-amber-500 text-stone-900 font-black rounded-xl uppercase tracking-widest">Return to Throne</button>
         </div>
     </div>
 
     <div id="leaderboard-modal" class="modal">
-        <div class="glass-pane p-8 rounded-[2.5rem] max-w-2xl w-full border-2 border-amber-500/40 relative shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+        <div class="glass-pane p-8 rounded-[2.5rem] max-w-2xl w-full border-2 border-amber-500/40 relative shadow-2xl flex flex-col max-h-[85vh]">
             <h2 class="text-4xl font-black text-amber-400 text-center mb-6 royal-title uppercase tracking-widest shrink-0">Hall of Registry</h2>
             <div class="bg-black/40 rounded-2xl p-4 overflow-y-auto flex-1 border border-white/5">
                 <table class="w-full text-left">
                     <thead>
                         <tr class="text-[10px] text-amber-500/50 uppercase font-black border-b border-amber-500/10">
-                            <th class="py-3 px-4">Rank</th><th class="py-3 px-4">Monarch</th><th class="py-3 px-4">Treasury Best</th>
+                            <th class="py-3 px-4">Rank</th><th class="py-3 px-4">Monarch</th><th class="py-3 px-4">Tokens</th>
                         </tr>
                     </thead>
                     <tbody id="leaderboard-body"></tbody>
@@ -409,6 +547,20 @@
 
     <script type="module" src="index.js"></script>
     <script>
+        setInterval(() => {
+            const cont = document.getElementById('character-particles');
+            if(!cont) return;
+            const p = document.createElement('div');
+            p.className = 'floating-particle';
+            p.innerHTML = ['❤️', '⭐', '✨', '👑', '🌸'][Math.floor(Math.random() * 5)];
+            p.style.left = (Math.random() * 80 + 50) + 'px';
+            p.style.top = (Math.random() * 80 + 50) + 'px';
+            p.style.setProperty('--tx', (Math.random() * 260 - 130) + 'px');
+            p.style.setProperty('--ty', (Math.random() * -260 - 50) + 'px');
+            p.style.setProperty('--tr', (Math.random() * 360) + 'deg');
+            cont.appendChild(p);
+            setTimeout(() => p.remove(), 3000);
+        }, 350);
         window.buyItem = (name, price, icon) => { window.dispatchEvent(new CustomEvent('buy-item', { detail: { name, price, icon } })); };
     </script>
 </body>

@@ -70,11 +70,13 @@ let chargeOscillator = null;
 let chargeGain = null;
 let currentShopCategory = 'Foods';
 let currentRound = 1;
+let cinemaModeActive = false;
 
 function init() {
     setupCards();
     setupEventListeners();
     setupCursor();
+    setupFestiveAtmosphere();
     updateUI();
     renderShop();
     renderRegistryChips();
@@ -86,24 +88,87 @@ function init() {
     }, 500);
 }
 
+function setupFestiveAtmosphere() {
+    const bannerCont = document.querySelector('.fiesta-banners');
+    if (bannerCont) {
+        bannerCont.innerHTML = '';
+        const colors = ['#ef4444', '#fbbf24', '#3b82f6', '#10b981', '#f97316', '#a855f7'];
+        for (let i = 0; i < 40; i++) {
+            const flag = document.createElement('div');
+            flag.className = 'flag';
+            flag.style.setProperty('--color', colors[i % colors.length]);
+            flag.style.setProperty('--delay', (0.5 + Math.random() * 1.5) + 's');
+            bannerCont.appendChild(flag);
+        }
+    }
+
+    const sparkleCont = document.getElementById('ambient-sparkles-container');
+    if (sparkleCont) {
+        sparkleCont.innerHTML = '';
+        for (let i = 0; i < 50; i++) {
+            createAmbientSparkle(sparkleCont);
+        }
+    }
+}
+
+function createAmbientSparkle(container) {
+    const sparkle = document.createElement('div');
+    sparkle.className = 'sparkle';
+    const size = 2 + Math.random() * 4;
+    sparkle.style.width = size + 'px';
+    sparkle.style.height = size + 'px';
+    sparkle.style.left = Math.random() * 100 + 'vw';
+    sparkle.style.top = '-10px';
+    sparkle.style.setProperty('--duration', (5 + Math.random() * 10) + 's');
+    sparkle.style.animationDelay = Math.random() * 10 + 's';
+    sparkle.style.background = `rgba(251, 191, 36, ${0.2 + Math.random() * 0.5})`;
+    container.appendChild(sparkle);
+}
+
+function generateQRSimulation() {
+    const grid = document.getElementById('qr-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    for (let i = 0; i < 144; i++) {
+        const block = document.createElement('div');
+        block.className = `qr-block ${Math.random() > 0.4 ? '' : 'empty'}`;
+        const x = i % 12; const y = Math.floor(i / 12);
+        if ((x < 3 && y < 3) || (x > 8 && y < 3) || (x < 3 && y > 8)) { block.className = 'qr-block'; }
+        grid.appendChild(block);
+    }
+}
+
 function handleNicknameEntry(explicitName = null) {
     const input = document.getElementById('nickname-input');
     const overlay = document.getElementById('nickname-overlay');
     const gameCont = document.getElementById('game-container');
-    const val = explicitName || input.value.trim();
+    const val = (explicitName || input.value).trim();
     
     if (val.length < 2) return;
     
     playerName = val;
-    saveToRegistry(playerName); 
     
-    document.getElementById('player-name-txt').innerText = playerName;
+    const monarch = getMonarchData(playerName);
+    if (monarch) {
+        balanceTokens = monarch.tokens;
+        hasToppedUp = balanceTokens > 0;
+    } else {
+        balanceTokens = 0;
+        hasToppedUp = false;
+    }
+    
+    saveToRegistry(playerName, balanceTokens); 
+    
+    const nameTxt = document.getElementById('player-name-txt');
+    if(nameTxt) nameTxt.innerText = playerName;
+    
     overlay.classList.add('fade-out');
     
     setTimeout(() => {
         overlay.style.display = 'none';
         gameCont.style.display = 'flex';
         setTimeout(() => gameCont.classList.add('visible'), 50);
+        updateUI();
     }, 800);
     
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -111,11 +176,23 @@ function handleNicknameEntry(explicitName = null) {
     playSound(880, 'square', 0.2);
 }
 
-function saveToRegistry(name) {
+function getMonarchData(name) {
+    const registry = JSON.parse(localStorage.getItem('perya_monarch_registry') || '[]');
+    return registry.find(n => n.name.toLowerCase() === name.toLowerCase());
+}
+
+function saveToRegistry(name, tokens) {
     let registry = JSON.parse(localStorage.getItem('perya_monarch_registry') || '[]');
-    registry = registry.filter(n => n.toLowerCase() !== name.toLowerCase());
-    registry.unshift(name);
-    if (registry.length > 10) registry = registry.slice(0, 10);
+    const idx = registry.findIndex(n => n.name.toLowerCase() === name.toLowerCase());
+    
+    if (idx !== -1) {
+        registry[idx].tokens = tokens;
+        registry[idx].lastSeen = new Date().toISOString();
+    } else {
+        registry.push({ name, tokens, lastSeen: new Date().toISOString() });
+    }
+    
+    registry.sort((a, b) => b.tokens - a.tokens);
     localStorage.setItem('perya_monarch_registry', JSON.stringify(registry));
 }
 
@@ -126,14 +203,13 @@ function renderRegistryChips() {
     const registry = JSON.parse(localStorage.getItem('perya_monarch_registry') || '[]');
     container.innerHTML = '';
     
-    registry.forEach(name => {
+    const displayed = registry.sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen)).slice(0, 8);
+    
+    displayed.forEach(monarch => {
         const chip = document.createElement('button');
         chip.className = 'registry-chip';
-        chip.innerText = name;
-        chip.onclick = () => {
-            document.getElementById('nickname-input').value = name;
-            handleNicknameEntry(name);
-        };
+        chip.innerText = monarch.name;
+        chip.onclick = () => handleNicknameEntry(monarch.name);
         container.appendChild(chip);
     });
 }
@@ -165,9 +241,9 @@ function renderCards() {
         btn.innerHTML = `
             <div class="card-ornate-corner corner-tl"></div><div class="card-ornate-corner corner-tr"></div>
             <div class="card-ornate-corner corner-bl"></div><div class="card-ornate-corner corner-br"></div>
-            <div class="absolute top-2.5 left-2.5 font-black ${COLORS[card.suit]} text-[11px] pointer-events-none">${card.rank}</div>
-            <div class="card-symbol-glow ${COLORS[card.suit]} text-5xl pointer-events-none">${SYMBOLS[card.suit]}</div>
-            <div class="absolute bottom-2.5 right-2.5 font-black rotate-180 ${COLORS[card.suit]} text-[11px] pointer-events-none">${card.rank}</div>
+            <div class="absolute top-3 left-4 font-black ${COLORS[card.suit]} text-[14px] pointer-events-none drop-shadow-lg">${card.rank}</div>
+            <div class="text-6xl ${COLORS[card.suit]} pointer-events-none transition-transform group-hover:scale-110 drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]">${SYMBOLS[card.suit]}</div>
+            <div class="absolute bottom-3 right-4 font-black rotate-180 ${COLORS[card.suit]} text-[14px] pointer-events-none drop-shadow-lg">${card.rank}</div>
         `;
         grid.appendChild(btn);
     });
@@ -206,9 +282,19 @@ function handleCardClick(id) {
 }
 
 function updateUI() {
-    document.getElementById('balance-txt').innerText = balanceTokens.toLocaleString();
-    document.getElementById('bet-count-txt').innerText = `${currentBets.length} / ${MAX_BETS}`;
+    const balEl = document.getElementById('balance-txt');
+    if(balEl) balEl.innerText = balanceTokens.toLocaleString();
+    
+    const betCountEl = document.getElementById('bet-count-txt');
+    if(betCountEl) betCountEl.innerText = `${currentBets.length} / ${MAX_BETS}`;
+    
+    const grid = document.getElementById('card-grid');
+    if (grid) {
+        grid.classList.toggle('max-bets', currentBets.length === MAX_BETS);
+    }
+
     const drawBtn = document.getElementById('draw-btn');
+    if(!drawBtn) return;
     const isLocked = !hasToppedUp;
     drawBtn.disabled = isDrawing || currentBets.length === 0 || balanceTokens < (currentBets.length * betAmountPerCard) || isLocked;
     
@@ -222,6 +308,8 @@ function updateUI() {
         const el = document.getElementById(`card-${c.id}`);
         if (el) el.classList.toggle('selected', currentBets.includes(c.id));
     });
+
+    saveToRegistry(playerName, balanceTokens);
 }
 
 function startCharging() {
@@ -237,7 +325,8 @@ function startCharging() {
         chargeGain.connect(audioCtx.destination);
         chargeOscillator.start();
     }
-    document.getElementById('draw-btn').classList.add('scale-95', 'brightness-110');
+    const btn = document.getElementById('draw-btn');
+    if(btn) btn.classList.add('scale-95', 'brightness-110');
     chargeLoop();
 }
 
@@ -246,7 +335,8 @@ function chargeLoop() {
     chargePower += 3 * chargeDirection;
     if (chargePower >= 100) { chargePower = 100; chargeDirection = -1; }
     if (chargePower <= 0) { chargePower = 0; chargeDirection = 1; }
-    document.getElementById('power-fill').style.width = `${chargePower}%`;
+    const fill = document.getElementById('power-fill');
+    if(fill) fill.style.width = `${chargePower}%`;
     if (chargeOscillator) {
         chargeOscillator.frequency.setTargetAtTime(120 + (chargePower * 5), audioCtx.currentTime, 0.04);
     }
@@ -261,15 +351,13 @@ function stopCharging() {
         chargeOscillator.stop(); chargeOscillator.disconnect();
         chargeOscillator = null;
     }
-    document.getElementById('draw-btn').classList.remove('scale-95', 'brightness-110');
+    const btn = document.getElementById('draw-btn');
+    if(btn) btn.classList.remove('scale-95', 'brightness-110');
     handleLaunch();
-    document.getElementById('power-fill').style.width = '0%';
+    const fill = document.getElementById('power-fill');
+    if(fill) fill.style.width = '0%';
 }
 
-/**
- * Robust target coordinate calculation relative to the ball layer.
- * This ensures balls land perfectly even in Fullscreen or scaled layouts.
- */
 function getTargetCoords(targetId) {
     const layer = document.getElementById('ball-layer');
     const card = document.getElementById(`card-${targetId}`);
@@ -278,7 +366,6 @@ function getTargetCoords(targetId) {
     const layerRect = layer.getBoundingClientRect();
     const cardRect = card.getBoundingClientRect();
     
-    // Scale-aware relative coordinates
     return {
         x: (cardRect.left - layerRect.left) + (cardRect.width / 2) - 13,
         y: (cardRect.top - layerRect.top) + (cardRect.height / 2) - 13
@@ -294,16 +381,20 @@ function handleLaunch() {
     for (let i = 0; i < 3; i++) {
         const ball = document.getElementById(`ball-${i}`);
         const shadow = document.getElementById(`shadow-${i}`);
+        if(!ball || !shadow) continue;
         
         const startIdx = Math.floor(Math.random() * cards.length);
         const { x, y } = getTargetCoords(cards[startIdx].id);
+        
+        ball.getAnimations().forEach(anim => anim.cancel());
+        shadow.getAnimations().forEach(anim => anim.cancel());
         
         ball.style.transform = `translate(${x}px, ${y}px)`;
         shadow.style.transform = `translate(${x}px, ${y}px)`;
         ball.style.opacity = '1'; shadow.style.opacity = '1';
         
         const finalIdx = Math.floor(Math.random() * cards.length);
-        const hops = 3 + Math.floor(Math.random() * 13);
+        const hops = 4 + Math.floor(Math.random() * 8);
         
         setTimeout(() => {
             animateBall(i, ball, shadow, hops, finalIdx, hops, startIdx);
@@ -360,12 +451,18 @@ function finalize() {
     winningIndices.forEach(idx => {
         const card = cards[idx];
         const el = document.getElementById(`card-${card.id}`);
-        if (el) el.classList.add('winning-hit');
-        if (currentBets.includes(card.id)) matches++;
+        if (el) {
+            el.classList.add('winning-hit');
+            if (currentBets.includes(card.id)) {
+                matches++;
+                spawnWinParticles(el);
+                playSound(1200, 'sine', 0.15);
+            }
+        }
         
         const pill = document.createElement('div');
-        pill.className = 'winner-pill';
-        pill.innerText = `👑 ${card.fullName}`;
+        pill.className = 'winner-pill flex justify-between items-center';
+        pill.innerHTML = `<span>👑 ${card.fullName}</span><span class="${currentBets.includes(card.id) ? 'text-emerald-400 font-bold ml-2' : 'hidden'}">MATCH!</span>`;
         listContainer.appendChild(pill);
     });
 
@@ -375,28 +472,69 @@ function finalize() {
     
     setTimeout(() => {
         if (matches > 0) { 
-            barkerTalk(`Round ${currentRound} Complete! Majesty won ${payout} Tokens.`); 
+            barkerTalk(`Regal Jackpot! Majesty won ${payout} Tokens!`); 
             initConfetti(); 
-            playSound(440, 'square', 0.5);
+            playSound(660, 'square', 0.6);
         } else {
             barkerTalk(`Luck shifts in Round ${currentRound}... try again!`);
         }
         
-        // Render "NEXT ROUND" progression button
         const nextRoundBtn = document.createElement('button');
         nextRoundBtn.className = 'w-full py-3 mt-2 bg-emerald-500 text-white font-black rounded-xl uppercase tracking-widest text-[10px] shadow-[0_5px_15px_rgba(16,185,129,0.3)] hover:scale-105 transition-all';
-        nextRoundBtn.innerText = `PLAY AGAIN / START ROUND ${currentRound + 1}`;
+        nextRoundBtn.innerText = `NEXT ROUND`;
         nextRoundBtn.onclick = () => {
             currentRound++;
             isDrawing = false;
-            document.querySelectorAll('.perya-card').forEach(el => el.classList.remove('winning-hit'));
-            document.querySelectorAll('#ball-layer div').forEach(el => el.style.opacity = '0');
+            currentBets = [];
+            document.querySelectorAll('.perya-card').forEach(el => el.classList.remove('winning-hit', 'selected'));
+            for (let i = 0; i < 3; i++) {
+                const b = document.getElementById(`ball-${i}`);
+                const s = document.getElementById(`shadow-${i}`);
+                if(b && s) { b.style.opacity = '0'; s.style.opacity = '0'; }
+            }
             listContainer.innerHTML = '';
             updateUI();
         };
         listContainer.appendChild(nextRoundBtn);
-        
     }, 1200);
+}
+
+function spawnWinParticles(element) {
+    const rect = element.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    for (let i = 0; i < 20; i++) {
+        const star = document.createElement('div');
+        star.className = 'fixed pointer-events-none z-[1000] text-amber-400 text-xl font-bold';
+        star.innerText = ['⭐', '✨', '👑'][Math.floor(Math.random() * 3)];
+        star.style.left = centerX + 'px'; star.style.top = centerY + 'px';
+        document.body.appendChild(star);
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 100 + Math.random() * 150;
+        const tx = Math.cos(angle) * dist; const ty = Math.sin(angle) * dist;
+        star.animate([{ transform: 'translate(-50%, -50%) scale(0) rotate(0deg)', opacity: 1 }, { transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(1.5) rotate(${Math.random() * 360}deg)`, opacity: 0 }], { duration: 1000, easing: 'cubic-bezier(0, .9, .57, 1)' }).onfinish = () => star.remove();
+    }
+}
+
+function spawnShopParticles() {
+    for (let i = 0; i < 30; i++) {
+        const p = document.createElement('div');
+        p.className = 'fixed pointer-events-none z-[25000] text-2xl';
+        p.innerHTML = ['🎁', '💎', '🎉', '🧧', '🌟'][Math.floor(Math.random() * 5)];
+        p.style.left = '50%';
+        p.style.top = '50%';
+        document.body.appendChild(p);
+        
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 150 + Math.random() * 300;
+        const tx = Math.cos(angle) * dist;
+        const ty = Math.sin(angle) * dist;
+        
+        p.animate([
+            { transform: 'translate(-50%, -50%) scale(0) rotate(0deg)', opacity: 1 },
+            { transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(2) rotate(${Math.random() * 720}deg)`, opacity: 0 }
+        ], { duration: 1500, easing: 'cubic-bezier(0, .9, .57, 1)' }).onfinish = () => p.remove();
+    }
 }
 
 function playSound(f, t, d) {
@@ -412,19 +550,10 @@ function playSound(f, t, d) {
 function setupCursor() {
     const cursor = document.getElementById('custom-cursor');
     const label = document.getElementById('cursor-label');
+    if (!cursor) return;
     let mx = 0, my = 0, cx = 0, cy = 0;
-    const update = () => {
-        cx += (mx - cx) * 0.4; cy += (my - cy) * 0.4;
-        cursor.style.transform = `translate3d(${cx}px, ${cy}px, 0) translate(-50%, -50%)`;
-        requestAnimationFrame(update);
-    };
-    window.addEventListener('mousemove', (e) => {
-        mx = e.clientX; my = e.clientY;
-        const target = e.target;
-        const isBtn = !!target.closest('button, .perya-card');
-        cursor.classList.toggle('hovering-btn', isBtn);
-        label.style.opacity = isBtn ? "1" : "0";
-    });
+    const update = () => { cx += (mx - cx) * 0.4; cy += (my - cy) * 0.4; cursor.style.transform = `translate3d(${cx}px, ${cy}px, 0) translate(-50%, -50%)`; requestAnimationFrame(update); };
+    window.addEventListener('mousemove', (e) => { mx = e.clientX; my = e.clientY; const target = e.target; const isBtn = !!target.closest('button, .perya-card'); cursor.classList.toggle('hovering-btn', isBtn); if (label) label.style.opacity = isBtn ? "1" : "0"; });
     requestAnimationFrame(update);
 }
 
@@ -432,110 +561,113 @@ function renderShop() {
     const grid = document.getElementById('shop-grid');
     if (!grid) return;
     const items = SHOP_DATA[currentShopCategory];
-    grid.innerHTML = items.map(item => `
-        <div class="glass-pane p-4 rounded-xl text-center cursor-pointer hover:border-amber-500 transition-all flex flex-col items-center justify-between min-h-[140px]" onclick="buyItem('${item.name}', ${item.price})">
-            <div class="text-4xl mb-2">${item.icon}</div>
-            <div class="text-white font-black text-[9px] uppercase tracking-widest">${item.name}</div>
-            <div class="text-amber-500 text-[11px] font-black mt-2">🪙 ${item.price}</div>
-        </div>
-    `).join('');
+    grid.innerHTML = items.map(item => `<div class="glass-pane p-4 rounded-xl text-center cursor-pointer hover:border-amber-500 transition-all flex flex-col items-center justify-between min-h-[140px]" onclick="buyItem('${item.name}', ${item.price}, '${item.icon}')"><div class="text-4xl mb-2">${item.icon}</div><div class="text-white font-black text-[9px] uppercase tracking-widest">${item.name}</div><div class="text-amber-500 text-[11px] font-black mt-2">🪙 ${item.price}</div></div>`).join('');
 }
 
 function loadLeaderboard() {
     const body = document.getElementById('leaderboard-body');
-    body.innerHTML = `
-        <tr class="border-b border-white/5"><td class="py-4 px-4 font-black">1</td><td class="py-4 px-4 font-bold">EMPEROR_LUXE</td><td class="py-4 px-4 text-amber-500">🪙 12,500</td></tr>
-        <tr class="border-b border-white/5"><td class="py-4 px-4 font-black">2</td><td class="py-4 px-4 font-bold">MONARCH_99</td><td class="py-4 px-4 text-amber-500">🪙 8,200</td></tr>
-    `;
+    if (!body) return;
+    const registry = JSON.parse(localStorage.getItem('perya_monarch_registry') || '[]');
+    registry.sort((a, b) => b.tokens - a.tokens);
+    if (registry.length === 0) {
+        body.innerHTML = '<tr><td colspan="3" class="py-10 text-center opacity-30 text-[10px] uppercase font-black">No Monarchs Registered Yet</td></tr>';
+        return;
+    }
+    body.innerHTML = registry.slice(0, 10).map((player, idx) => `<tr class="border-b border-white/5 hover:bg-white/5 transition-colors"><td class="py-4 px-4 font-black text-amber-500">${idx + 1}</td><td class="py-4 px-4 font-bold uppercase tracking-widest text-[11px]">${player.name}</td><td class="py-4 px-4 font-black">🪙 ${player.tokens.toLocaleString()}</td></tr>`).join('');
+}
+
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+            console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+        });
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+    }
 }
 
 function setupEventListeners() {
-    document.getElementById('enter-game-btn').onclick = () => handleNicknameEntry();
-    document.getElementById('refill-btn').onclick = () => document.getElementById('payment-modal').style.display = 'flex';
-    document.getElementById('leaderboard-toggle-btn').onclick = () => document.getElementById('leaderboard-modal').style.display = 'flex';
-    document.getElementById('shop-toggle-btn').onclick = () => { document.getElementById('shop-modal').style.display = 'flex'; renderShop(); };
-    document.getElementById('rules-toggle-btn').onclick = () => document.getElementById('rules-modal').style.display = 'flex';
+    const enterBtn = document.getElementById('enter-game-btn');
+    if (enterBtn) enterBtn.onclick = () => handleNicknameEntry();
+    
+    const refillBtn = document.getElementById('refill-btn');
+    if (refillBtn) refillBtn.onclick = () => { 
+        document.getElementById('payment-modal').style.display = 'flex'; 
+        document.getElementById('qr-simulation-area').style.display = 'none'; 
+        generateQRSimulation(); 
+    };
+    
+    const leaderboardBtn = document.getElementById('leaderboard-toggle-btn');
+    if (leaderboardBtn) leaderboardBtn.onclick = () => { loadLeaderboard(); document.getElementById('leaderboard-modal').style.display = 'flex'; };
+    
+    const shopBtn = document.getElementById('shop-toggle-btn');
+    if (shopBtn) shopBtn.onclick = () => { document.getElementById('shop-modal').style.display = 'flex'; renderShop(); };
+    
+    const rulesBtn = document.getElementById('rules-toggle-btn');
+    if (rulesBtn) rulesBtn.onclick = () => document.getElementById('rules-modal').style.display = 'flex';
+    
+    const cinemaBtn = document.getElementById('cinema-mode-btn');
+    if (cinemaBtn) {
+        cinemaBtn.onclick = () => {
+            cinemaModeActive = !cinemaModeActive;
+            document.body.classList.toggle('cinema-mode', cinemaModeActive);
+            cinemaBtn.innerText = `Cinema Mode: ${cinemaModeActive ? 'ON' : 'OFF'}`;
+            cinemaBtn.classList.toggle('active', cinemaModeActive);
+            playSound(440, 'sine', 0.1);
+        };
+    }
+
+    const fsFrontBtn = document.getElementById('fullscreen-front-btn');
+    if (fsFrontBtn) fsFrontBtn.onclick = toggleFullscreen;
+    
     document.querySelectorAll('.close-modal').forEach(btn => btn.onclick = () => btn.closest('.modal').style.display = 'none');
     
-    document.getElementById('fullscreen-btn').onclick = () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(err => {
-                console.warn(`Error attempting to enable fullscreen: ${err.message}`);
-            });
-        } else {
-            document.exitFullscreen();
-        }
-    };
+    const fsBtn = document.getElementById('fullscreen-btn');
+    if (fsBtn) fsBtn.onclick = toggleFullscreen;
 
     const drawBtn = document.getElementById('draw-btn');
-    drawBtn.onmousedown = startCharging;
-    window.onmouseup = stopCharging;
+    if (drawBtn) { drawBtn.onmousedown = startCharging; window.onmouseup = stopCharging; }
 
-    // Spacebar Listeners
-    window.addEventListener('keydown', (e) => {
-        if (e.code === 'Space' && !e.repeat) {
-            // Only trigger if not typing in the nickname input
-            if (document.activeElement.tagName !== 'INPUT') {
-                e.preventDefault();
-                startCharging();
-            }
-        }
-    });
+    window.addEventListener('keydown', (e) => { if (e.code === 'Space' && !e.repeat && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); startCharging(); } });
+    window.addEventListener('keyup', (e) => { if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT') stopCharging(); });
 
-    window.addEventListener('keyup', (e) => {
-        if (e.code === 'Space') {
-            if (document.activeElement.tagName !== 'INPUT') {
-                stopCharging();
-            }
-        }
-    });
+    document.querySelectorAll('.shop-tab-btn').forEach(btn => { btn.onclick = () => { currentShopCategory = btn.dataset.shopCat; document.querySelectorAll('.shop-tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderShop(); }; });
 
-    document.querySelectorAll('.shop-tab-btn').forEach(btn => {
-        btn.onclick = () => {
-            currentShopCategory = btn.dataset.shopCat;
-            document.querySelectorAll('.shop-tab-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            renderShop();
-        };
-    });
-
-    document.querySelectorAll('.vault-pack').forEach(pack => pack.onclick = () => {
-        selectedPack = { tokens: parseInt(pack.dataset.tokens) };
-        document.querySelectorAll('.vault-pack').forEach(p => p.classList.remove('active'));
-        pack.classList.add('active');
-        checkPaymentValidity();
-    });
+    document.querySelectorAll('.vault-pack').forEach(pack => pack.onclick = () => { selectedPack = { tokens: parseInt(pack.dataset.tokens) }; document.querySelectorAll('.vault-pack').forEach(p => p.classList.remove('active')); pack.classList.add('active'); checkPaymentValidity(); });
 
     document.querySelectorAll('.payment-btn').forEach(btn => btn.onclick = () => {
         selectedPaymentMethod = btn.dataset.method;
         document.querySelectorAll('.payment-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        const qrArea = document.getElementById('qr-simulation-area');
+        if (['Line Pay', 'Taiwan Pay'].includes(selectedPaymentMethod)) {
+            qrArea.style.display = 'flex';
+            document.getElementById('qr-method-name').innerText = selectedPaymentMethod;
+            generateQRSimulation();
+        } else { qrArea.style.display = 'none'; }
         checkPaymentValidity();
     });
 
-    function checkPaymentValidity() {
-        const btn = document.getElementById('complete-purchase');
-        if (selectedPack && selectedPaymentMethod) {
-            btn.disabled = false;
-            btn.classList.remove('opacity-50');
-        }
-    }
+    function checkPaymentValidity() { const btn = document.getElementById('complete-purchase'); if (selectedPack && selectedPaymentMethod && btn) { btn.disabled = false; btn.classList.remove('opacity-50'); } }
 
-    document.getElementById('complete-purchase').onclick = () => {
-        balanceTokens += selectedPack.tokens; hasToppedUp = true;
-        updateUI(); document.getElementById('payment-modal').style.display = 'none';
-        playSound(880, 'square', 0.4);
-    };
+    const finalizeBtn = document.getElementById('complete-purchase');
+    if (finalizeBtn) finalizeBtn.onclick = () => { balanceTokens += selectedPack.tokens; hasToppedUp = true; updateUI(); document.getElementById('payment-modal').style.display = 'none'; playSound(880, 'square', 0.4); barkerTalk(`Deposit complete! Your treasury grows, Majesty.`); };
     
     window.addEventListener('buy-item', (e) => {
-        const { name, price } = e.detail;
+        const { name, price, icon } = e.detail;
         if (balanceTokens >= price) {
             balanceTokens -= price; updateUI();
             barkerTalk(`Excellent choice! ${name} is yours.`);
-            alert(`You bought: ${name}!`);
-        } else {
-            alert("Insufficient tokens!");
-        }
+            const ticket = document.getElementById('souvenir-ticket');
+            document.getElementById('ticket-item-icon').innerText = icon || '🎁';
+            document.getElementById('ticket-item-name').innerText = name;
+            document.getElementById('ticket-player-name').innerText = playerName;
+            ticket.classList.add('visible');
+            spawnShopParticles();
+            playSound(1200, 'sine', 0.5);
+        } else { alert("Insufficient tokens! Visit the Imperial Treasury."); }
     });
 }
 
@@ -547,7 +679,7 @@ async function barkerTalk(ctx) {
             contents: `Game dealer speaking royal decree. Max 8 words. Context: ${ctx}`,
             config: { systemInstruction: "Enthusiastic royal carnival barker.", temperature: 1 }
         });
-        if (res.text) document.getElementById('dealer-msg').innerText = `"${res.text.trim()}"`;
+        if (res.text) { const msgEl = document.getElementById('dealer-msg'); if (msgEl) msgEl.innerText = `"${res.text.trim()}"`; }
     } catch (e) {}
 }
 
@@ -556,7 +688,7 @@ function initConfetti() {
         const c = document.createElement('div');
         c.className = 'fixed pointer-events-none z-[20000] w-2 h-2 rounded-sm';
         c.style.left = Math.random() * 100 + 'vw'; c.style.top = '-20px';
-        c.style.backgroundColor = ['#fbbf24', '#ef4444', '#ffffff', '#ffd700'][Math.floor(Math.random() * 4)];
+        c.style.backgroundColor = ['#fbbf24', '#ef4444', '#ffffff', '#ffd700', '#3b82f6', '#10b981'][Math.floor(Math.random() * 6)];
         document.body.appendChild(c);
         c.animate([{ transform: 'translateY(0) rotate(0)', opacity: 1 }, { transform: `translateY(110vh) rotate(${Math.random() * 720}deg)`, opacity: 0 }], { duration: 2000 }).onfinish = () => c.remove();
     }
